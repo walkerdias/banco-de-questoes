@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banco de Questões</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d1117"/> 
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body> 
+  <div class="wrap">
+    <header>
+      <h1>Banco de Questões</h1>
+
+      <div class="controls">
+        <button id="themeToggle" class="btn secondary">🌙 Modo Escuro</button>
+        
+        <button id="btnNovo">+ Nova questão</button>
+        <button id="btnQuiz" class="btn secondary">Modo treino</button>
+        <button id="btnExport" class="btn secondary">Exportar JSON</button>
+        <button id="btnImport" class="btn secondary">Importar JSON</button>
+        <button id="btnLimpar" class="btn secondary" style="background: var(--danger)">Limpar tudo</button>
+      </div>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <div class="top-bar">
+          <div class="search">
+            <input id="fSearch" type="text" placeholder="Pesquisar...">
+            <select id="fAssunto"></select>
+          </div>
+          <div class="search" style="margin-top: 5px; margin-bottom: 5px;">
+            <select id="fDisciplina"></select>
+            <select id="fBanca"></select>
+            <select id="fAno"></select>
+          </div>
+          <span id="quizTimer" class="quiz-timer" style="display: none;">00:00</span>
+        </div>
+        
+        <div id="lista" class="list">
+          <p class="meta">Carregando questões...</p>
+        </div>
+
+        <div id="resultado" style="margin-top: 15px;"></div>
+        <div id="quizActions" style="text-align: right; margin-top: 10px;">
+          </div>
+      </div>
+
+      <aside>
+        <div id="formCard" class="card">
+          <form id="form">
+            <h3>Adicionar / Editar Questão</h3>
+            <input id="qid" type="hidden"> <label>Disciplina
+              <input id="disciplina" type="text" placeholder="Ex: Direito Constitucional">
+            </label>
+
+            <label>Ano
+              <input id="ano" type="number" placeholder="Ex: 2023">
+            </label>
+
+            <label>Banca
+              <input id="banca" type="text" placeholder="Ex: CESPE">
+            </label>
+            <label>Assunto (Ex: História Geral)
+              <input id="assunto" type="text">
+            </label>
+
+            <label>Tópico (Ex: Revolução Francesa)
+              <input id="topico" type="text">
+            </label>
+
+            <label>Enunciado / Pergunta
+              <textarea id="enunciado"></textarea>
+            </label>
+            
+            <label>Opções</label>
+            <div class="options">
+              <label>A <input id="optA" type="text"></label>
+              <label>B <input id="optB" type="text"></label>
+              <label>C <input id="optC" type="text"></label>
+              <label>D <input id="optD" type="text"></label>
+              <label>E <input id="optE" type="text"></label>
+            </div>
+
+            <label>Resposta correta
+              <select id="correta">
+                <option value="">-- escolha --</option>
+                <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+              </select>
+            </label>
+
+            <label>Comentário / Resolução
+              <textarea id="resolucao"></textarea>
+            </label>
+
+            <label>Tags (separadas por vírgula)
+              <input id="tags" type="text">
+            </label>
+
+            <div class="form-actions">
+              <button id="btnSalvar" class="btn primary">Salvar</button>
+              <button id="btnCancelar" type="button" class="btn secondary">Cancelar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card info">
+          <h4>Importante</h4>
+          <p>O banco funciona 100% local (localStorage). Você pode instalar como PWA no celular através do menu do seu navegador (ex: "Adicionar à tela inicial").</p>
+        </div>
+      </aside>
+    </section>
+
+    <div class="footer">Feito para te ajudar a estudar.</div>
+  </div>
+
+  <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+  <script src="app.js"></script>
+</body>
+</html>

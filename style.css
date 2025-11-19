@@ -1,0 +1,453 @@
+:root {
+  /* Variáveis base (Padrão: Dark Mode - Preto/Azul) */
+  --bg: #0d1117; /* Fundo */
+  --card: #161b22; /* Cartões/Elementos de UI */
+  --border: #1f242d; /* Borda e divisores */
+  --accent: #0f6efd; /* Azul primário */
+  --accent-light: rgba(15, 110, 253, 0.2); /* Destaque suave */
+  --danger: #dc3545; /* Vermelho (Excluir) */
+  --success: #28a745; /* Verde (Copiar/Acerto) */
+  --text-primary: #c9d1d9; /* Texto principal */
+  --text-muted: #8b949e; /* Texto secundário/meta */
+  --shadow-color: rgba(0, 0, 0, 0.4); /* Cor da sombra */
+}
+
+/* NOVO: Variáveis para o Light Mode (Branco/Cinza/Azul) */
+body.light-mode {
+  --bg: #f4f7f9; 
+  --card: #ffffff; 
+  --border: #e0e6ed; 
+  --accent: #007aff; 
+  --accent-light: rgba(0, 122, 255, 0.15); 
+  --danger: #e63946; 
+  --success: #06d6a0; 
+  --text-primary: #212529; 
+  --text-muted: #6c757d; 
+  --shadow-color: rgba(0, 0, 0, 0.1); 
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  font-family: 'Inter', 'Roboto', Arial, sans-serif;
+  color: var(--text-primary);
+  transition: background 0.3s, color 0.3s;
+  min-height: 100vh;
+}
+
+/* Container */
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto; 
+  padding: 16px;
+  overflow-x: hidden; 
+}
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px; /* Mais espaço */
+  flex-wrap: wrap; 
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+/* Controles e Botões */
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px; 
+}
+
+button,
+.btn {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: 0.2s;
+  box-shadow: 0 2px 8px var(--shadow-color); /* Usa a nova variável de sombra */
+  white-space: nowrap; 
+}
+
+/* Botão Primário (Default) */
+button:not(.btn.secondary),
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+button:not(.btn.secondary):hover,
+.btn.primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Botão Secundário */
+.btn.secondary {
+  background: var(--card);
+  color: var(--text-primary); /* Texto na cor principal */
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.btn.secondary:hover {
+  background: var(--border);
+  transform: translateY(-1px);
+}
+
+/* Ações perigosas e de sucesso */
+.btn[style*="--danger"] {
+  background: var(--danger) !important;
+  color: #fff !important;
+}
+
+.btn[style*="--success"] {
+  background: var(--success) !important;
+  color: #fff !important;
+}
+
+
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: 12px; /* Mais arredondado */
+  padding: 20px; /* Mais padding */
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 15px var(--shadow-color);
+  margin-bottom: 20px; 
+}
+
+/* Layout Grid (Desktop) / Coluna Simples (Mobile) */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+}
+
+/* Forçar Coluna Única no Mobile */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr; 
+  }
+}
+
+/* Lista e Filtros */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%; 
+  flex-wrap: wrap;
+}
+
+.search input,
+.search select {
+  flex-grow: 1;
+  min-width: 120px;
+  flex-basis: auto; 
+}
+
+@media (max-width: 600px) {
+    .search input,
+    .search select {
+        flex-basis: 100%; 
+    }
+    .search {
+      gap: 5px; 
+    }
+}
+
+
+.list {
+  padding: 0 8px; 
+  border: none;
+  box-shadow: none;
+  background: none;
+  
+  max-height: 55vh; 
+  overflow-y: auto;
+}
+
+@media (min-width: 901px) {
+    .list {
+        max-height: 550px;
+        overflow-y: auto;
+    }
+    .quiz-container {
+        max-height: none;
+        overflow-y: visible;
+    }
+}
+
+
+/* Estilo para barras de rolagem (usa cores do tema) */
+.list::-webkit-scrollbar {
+  width: 8px;
+}
+.list::-webkit-scrollbar-track {
+  background: var(--bg); 
+}
+.list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+.list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+
+.qitem {
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  margin-bottom: 12px;
+  transition: 0.2s;
+  word-break: break-word; 
+}
+
+.qitem p {
+  margin: 8px 0;
+  white-space: pre-wrap; 
+  overflow-wrap: break-word; 
+  word-break: break-word; 
+}
+
+.qitem:hover {
+  background: var(--border);
+  box-shadow: 0 2px 10px var(--shadow-color);
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.meta b {
+  color: var(--text-primary);
+}
+
+.actions {
+  display: flex;
+  gap: 6px; 
+  margin-top: 10px;
+}
+
+.actions button {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+}
+
+/* Tags */
+.tag {
+  display: inline-block;
+  background: var(--accent-light);
+  color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-right: 4px;
+  font-weight: 500;
+  margin-bottom: 4px; 
+}
+
+/* Formulário */
+h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--text-primary);
+}
+
+label {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+input[type="text"],
+input[type="number"], 
+textarea,
+select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg); /* Fundo do input na cor do BG */
+  color: var(--text-primary);
+  margin-top: 6px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus, 
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+/* Quiz Mode */
+.quiz-card {
+  padding: 24px !important;
+  border: 2px solid var(--accent) !important;
+  box-shadow: 0 8px 30px var(--shadow-color) !important;
+  animation: fadeIn 0.3s ease;
+}
+
+.quiz-card p {
+  white-space: pre-wrap;
+  margin-top: 0;
+  overflow-wrap: break-word; 
+  word-break: break-word;
+}
+
+.quiz-option {
+  width: 100%;
+  text-align: left;
+  padding: 14px 18px;
+  background: var(--card);
+  color: var(--text-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  transition: 0.2s;
+  box-shadow: none;
+  margin-bottom: 8px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.quiz-option:hover {
+  background: var(--border);
+  transform: none;
+  color: var(--text-primary);
+}
+
+.quiz-option.selecionada {
+  /* Estilo que denota seleção, usando o tema */
+  background: var(--accent-light);
+  border-color: var(--accent);
+  border-width: 2px;
+}
+
+.quiz-option.certa {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+.quiz-option.errada {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.quiz-option:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.quiz-timer {
+  margin-left: 10px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Estilo para a Resolução */
+.quiz-resolucao {
+  background: var(--border);
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+  margin-top: 10px;
+  font-size: 0.9rem;
+  white-space: pre-wrap; 
+  overflow-wrap: break-word;
+  word-break: break-word; 
+}
+
+/* Sidebar Info */
+.info h4 {
+  margin-top: 0;
+  color: var(--accent);
+}
+
+.info p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Footer */
+.footer {
+  margin-top: 30px;
+  padding-bottom: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Responsividade de Última Instância (para telas muito pequenas) */
+@media (max-width: 500px) {
+  .controls {
+    justify-content: center;
+  }
+  
+  /* Ajusta o tamanho dos botões na linha de controle (header) para caberem melhor */
+  .controls button, .controls .btn {
+    flex-basis: 48%; 
+  }
+
+  .quiz-option {
+    font-size: 0.9rem;
+  }
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
