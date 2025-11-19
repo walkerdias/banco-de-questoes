@@ -1,6 +1,6 @@
 {
-  "name": "Banco de Questões Dark Mode",
-  "short_name": "Questões DM",
+  "name": "Banco de Questões",
+  "short_name": "Questões WD",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f7f9",  
