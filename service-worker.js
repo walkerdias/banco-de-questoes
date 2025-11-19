@@ -1,4 +1,4 @@
-const CACHE_NAME = "banco-questoes-dark-v2";
+const CACHE_NAME = "banco-questoes-vercel-v3";
 const FILES = [
   "index.html",
   "style.css",
