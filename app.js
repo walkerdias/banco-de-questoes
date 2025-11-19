@@ -12,8 +12,14 @@ const fAssunto = document.getElementById('fAssunto');
 const fSearch = document.getElementById('fSearch');
 const quizTimerEl = document.getElementById('quizTimer');
 const fileInput = document.getElementById('fileInput');
+const formContainer = document.getElementById('formCard'); // Container do formulário
+const headerControls = document.querySelector('header .controls'); // Botões de controle no header
+const topBarControls = document.querySelector('.top-bar .search'); // Filtros da Top Bar (assunto, busca, etc.)
+const topBarControls2 = document.querySelector('.top-bar .search:nth-child(2)'); // Segunda linha de filtros (disciplina, banca, ano)
 
-// Referências para os novos filtros (ano, banca, disciplina)
+const questoesCountEl = document.getElementById('questoesCount');
+
+// Referências para os novos filtros
 const fAno = document.getElementById('fAno');
 const fBanca = document.getElementById('fBanca');
 const fDisciplina = document.getElementById('fDisciplina');
@@ -26,7 +32,6 @@ const btnLimpar = document.getElementById('btnLimpar');
 const btnNovo = document.getElementById('btnNovo');
 const btnQuiz = document.getElementById('btnQuiz');
 
-// NOVO: Referência para o botão de tema
 const themeToggle = document.getElementById('themeToggle'); 
 
 /* ---------------------------
@@ -52,7 +57,6 @@ function escapeHtml(txt){
     .replaceAll('&','&amp;')
     .replaceAll('<','&lt;')
     .replaceAll('>','&gt;');
-  // Converte quebras de linha (\n) para tag HTML <br>
   return safeTxt.replaceAll('\n', '<br>'); 
 }
 
@@ -64,7 +68,7 @@ function formatTime(seconds) {
 }
 
 function startTimer() {
-  stopTimer(); // Garante que apenas um timer esteja ativo
+  stopTimer(); 
   startTime = Date.now();
   timerInterval = setInterval(() => {
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
@@ -80,10 +84,25 @@ function stopTimer() {
 }
 
 /* ---------------------------
-   NOVO: Tema (Dark/Light Mode)
+   Controle do Formulário (Mostrar/Esconder)
+----------------------------*/
+function abrirFormulario() {
+  clearForm(); // Limpa antes de abrir
+  formContainer.style.display = 'block';
+  formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Opcional: Focar no primeiro campo
+  document.getElementById('disciplina').focus();
+}
+
+function fecharFormulario() {
+  formContainer.style.display = 'none';
+  clearForm();
+}
+
+/* ---------------------------
+   Tema (Dark/Light Mode)
 ----------------------------*/
 function loadTheme() {
-  // Pega o tema salvo, ou 'dark' como padrão
   const savedTheme = localStorage.getItem('theme') || 'dark';
   document.body.className = savedTheme + '-mode';
   updateThemeButton(savedTheme);
@@ -109,17 +128,17 @@ function updateThemeButton(theme) {
    Renderização
 ----------------------------*/
 
-// 1. Renderiza a lista de questões
 function renderQuestions(){
-  if(inQuiz) return;
+  if(inQuiz) {
+      if(questoesCountEl) questoesCountEl.style.display = 'none';
+      return;
+  }
   
-  // GARANTE A VISUALIZAÇÃO CORRETA EM DESKTOP (Remove a classe de ajuste do Quiz)
   lista.classList.remove('quiz-container');
   lista.classList.add('list'); 
 
   const termo = fSearch.value.toLowerCase().trim();
   const assuntoFiltro = fAssunto.value;
-  // NOVOS FILTROS
   const anoFiltro = fAno.value;
   const bancaFiltro = fBanca.value;
   const disciplinaFiltro = fDisciplina.value;
@@ -131,14 +150,21 @@ function renderQuestions(){
                         q.topico.toLowerCase().includes(termo) ||
                         q.tags.toLowerCase().includes(termo);
     const matchAssunto = !assuntoFiltro || q.assunto === assuntoFiltro;
-    // NOVAS CONDIÇÕES DE FILTRO
     const matchAno = !anoFiltro || String(q.ano) === anoFiltro;
     const matchBanca = !bancaFiltro || q.banca === bancaFiltro;
     const matchDisciplina = !disciplinaFiltro || q.disciplina === disciplinaFiltro;
     
-    // ATUALIZAÇÃO DA REGRA DE FILTRAGEM
     return matchSearch && matchAssunto && matchAno && matchBanca && matchDisciplina;
   });
+
+  // Atualiza contador
+  const total = filteredBD.length;
+  const texto = total === 1 ? 'questão encontrada' : 'questões encontradas';
+  
+  if (questoesCountEl) {
+     questoesCountEl.style.display = 'block'; 
+     questoesCountEl.innerHTML = `Total: <span style="color: var(--accent)">${total}</span> ${texto}`;
+  }
 
   if(filteredBD.length === 0){
     lista.innerHTML = `<p class="meta" style="text-align:center; padding: 20px;">Nenhuma questão encontrada com os filtros atuais.</p>`;
@@ -165,15 +191,13 @@ function renderQuestions(){
     </div>
   `).join('');
   
-  // Limpa o conteúdo do quiz
   document.getElementById('resultado').innerHTML = '';
   document.getElementById('quizActions').innerHTML = '';
 }
 
-// 2. Atualiza os filtros (assunto e os novos)
 function updateSubjectFilter(){
   const assuntos = [...new Set(BD.map(q => q.assunto).filter(a => a))].sort();
-  const anos = [...new Set(BD.map(q => q.ano).filter(a => a))].sort((a,b) => b - a); // Ordena decrescente
+  const anos = [...new Set(BD.map(q => q.ano).filter(a => a))].sort((a,b) => b - a);
   const bancas = [...new Set(BD.map(q => q.banca).filter(a => a))].sort();
   const disciplinas = [...new Set(BD.map(q => q.disciplina).filter(a => a))].sort();
 
@@ -195,7 +219,6 @@ function updateSubjectFilter(){
    CRUD (Create, Read, Update, Delete)
 ----------------------------*/
 
-// 1. Salvar Questão (Novo ou Edição)
 function saveQuestion(e){
   e.preventDefault();
 
@@ -212,38 +235,34 @@ function saveQuestion(e){
     correta: document.getElementById('correta').value,
     resolucao: document.getElementById('resolucao').value.trim(),
     tags: document.getElementById('tags').value.toLowerCase().trim(),
-    // NOVOS CAMPOS ADICIONADOS
     ano: document.getElementById('ano').value.trim(),
     banca: document.getElementById('banca').value.trim(),
     disciplina: document.getElementById('disciplina').value.trim()
   };
 
   if(!novaQuestao.enunciado || !novaQuestao.correta || !novaQuestao.assunto){
-    // Utiliza um alerta customizado ou mensagem de erro na UI em vez de alert()
     console.error("Erro: Enunciado, Assunto e Resposta Correta são obrigatórios.");
     alert("Por favor, preencha o Enunciado, Assunto e a Resposta Correta."); 
     return;
   }
 
   if(id){
-    // Edição (Update)
     const index = BD.findIndex(q => q.id == id);
     if(index !== -1){
       BD[index] = { ...BD[index], ...novaQuestao };
     }
   } else {
-    // Nova Questão (Create)
-    novaQuestao.id = Date.now(); // ID único
+    novaQuestao.id = Date.now(); 
     BD.push(novaQuestao);
   }
 
   saveBD();
-  clearForm();
+  // ALTERAÇÃO: Fecha o formulário após salvar
+  fecharFormulario(); 
   updateSubjectFilter();
   renderQuestions();
 }
 
-// 2. Limpar Formulário
 function clearForm(){
   form.reset();
   document.getElementById('qid').value = '';
@@ -268,17 +287,15 @@ function editQ(id){
   document.getElementById('correta').value = q.correta;
   document.getElementById('resolucao').value = q.resolucao;
   document.getElementById('tags').value = q.tags;
-  // NOVO: Preenche os novos campos
   document.getElementById('ano').value = q.ano;
   document.getElementById('banca').value = q.banca;
   document.getElementById('disciplina').value = q.disciplina;
 
 
-  // Garante que o formulário seja visível
-  const formCard = document.getElementById('formCard');
-  if (formCard) {
-    formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  // ALTERAÇÃO: Exibe o formulário ao editar
+  formContainer.style.display = 'block';
+  formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  
   document.getElementById('assunto').focus();
 }
 
@@ -293,7 +310,7 @@ function delQ(id){
 function copyQuestion(id){
   const q = BD.find(x => x.id == id);
   if(!q) return;
-  // NOVO: Inclui os novos campos no texto a ser copiado
+  
   const text = `Disciplina: ${q.disciplina || 'N/A'} / Ano: ${q.ano || 'N/A'} / Banca: ${q.banca || 'N/A'}\n${q.assunto} — ${q.topico}\n\n${q.enunciado}\n\nA) ${q.A}\nB) ${q.B}\nC) ${q.C}\nD) ${q.D}\nE) ${q.E}\n\nResposta: ${q.correta}\n\nResolução: ${q.resolucao || 'N/A'}`;
   
   try {
@@ -303,8 +320,6 @@ function copyQuestion(id){
     tempElement.select();
     document.execCommand('copy');
     document.body.removeChild(tempElement);
-
-    console.log('Questão copiada para a área de transferência.');
     alert('Questão copiada para a área de transferência.');
   } catch (err) {
     console.error('Erro ao copiar: ', err);
@@ -312,7 +327,6 @@ function copyQuestion(id){
   }
 }
 
-/* Expor funções globalmente para os handlers inline no HTML */
 window.editQ = editQ;
 window.delQ = delQ;
 window.copyQuestion = copyQuestion;
@@ -378,9 +392,16 @@ function initQuiz(){
     return;
   }
   
+  headerControls.style.display = 'none';
+  // ALTERAÇÃO: Garante que o form está escondido
+  formContainer.style.display = 'none';
+  topBarControls.style.display = 'none';
+  if(topBarControls2) topBarControls2.style.display = 'none';
+  
+  if (questoesCountEl) questoesCountEl.style.display = 'none';
+
   const termo = fSearch.value.toLowerCase().trim();
   const assuntoFiltro = fAssunto.value;
-  // NOVOS FILTROS
   const anoFiltro = fAno.value;
   const bancaFiltro = fBanca.value;
   const disciplinaFiltro = fDisciplina.value;
@@ -392,12 +413,10 @@ function initQuiz(){
                         q.topico.toLowerCase().includes(termo) ||
                         q.tags.toLowerCase().includes(termo);
     const matchAssunto = !assuntoFiltro || q.assunto === assuntoFiltro;
-    // NOVAS CONDIÇÕES DE FILTRO
     const matchAno = !anoFiltro || String(q.ano) === anoFiltro;
     const matchBanca = !bancaFiltro || q.banca === bancaFiltro;
     const matchDisciplina = !disciplinaFiltro || q.disciplina === disciplinaFiltro;
     
-    // ATUALIZAÇÃO DA REGRA DE FILTRAGEM
     return matchSearch && matchAssunto && matchAno && matchBanca && matchDisciplina;
   });
 
@@ -406,11 +425,9 @@ function initQuiz(){
     return;
   }
   
-  // ADICIONA A CLASSE PARA AJUSTE DINÂMICO DE ALTURA NO DESKTOP
   lista.classList.remove('list');
   lista.classList.add('quiz-container');
 
-  // Embaralha as questões para o treino
   quizOrder.sort(() => Math.random() - 0.5);
   
   inQuiz = true;
@@ -448,7 +465,7 @@ function mostrarQuiz(){
     { letra: 'C', texto: q.C },
     { letra: 'D', texto: q.D },
     { letra: 'E', texto: q.E }
-  ].filter(opt => opt.texto); // Remove opções vazias
+  ].filter(opt => opt.texto); 
 
   lista.innerHTML = `
     <div class="card quiz-card">
@@ -471,7 +488,6 @@ function mostrarQuiz(){
     </div>
   `;
   
-  // Limpa o resultado anterior e configura a ação inicial: Sair e Pular
   resolucaoEl.innerHTML = '';
   quizActions.innerHTML = `
     <button id="btnSair" onclick="sairTreino()" class="btn secondary">Sair do Treino</button>
@@ -485,21 +501,16 @@ function checarResposta(btn, letra, id){
 
   const opcoes = document.querySelectorAll('.quiz-option');
   
-// 1. Desativa todas as opções
   opcoes.forEach(option => {
     option.disabled = true;
   });
   
-  // 2. Marca a opção do usuário (sem revelar se está certo ou errado)
   btn.classList.add('selecionada'); 
 
-  // 3. Adiciona o botão "Ver Resposta"
   const quizActions = document.getElementById('quizActions');
-  // Remove o botão Pular se existir, pois não faz sentido pular após selecionar
   const btnPular = document.getElementById('btnPular');
   if(btnPular) btnPular.remove();
 
-  // Adiciona o botão "Ver Resposta"
   if (!document.getElementById('btnVerResp')) {
       quizActions.innerHTML += `
           <button id="btnVerResp" onclick="mostrarResolucao()" class="btn primary" style="margin-left: 10px;">Ver Resposta</button>
@@ -513,37 +524,37 @@ function mostrarResolucao(){
 
   const opcoes = document.querySelectorAll('.quiz-option');
   const resolucaoEl = document.getElementById('resultado');
+  let acertou = false;
 
-  // 1. APLICA CORES (REVELA A RESPOSTA)
   opcoes.forEach(option => {
-    // Pega a letra da opção (Ex: 'A', 'B', 'C'...)
     const text = option.textContent.trim();
     const letra = text.substring(0, 1);
     
-    // Marca a resposta correta em verde
     if(letra === q.correta){
       option.classList.add('certa');
+	  if(option.classList.contains('selecionada')) {
+        acertou = true; 
+      }
     }
     
-    // Marca a opção do usuário em vermelho, se estiver errada
     if(option.classList.contains('selecionada') && letra !== q.correta){
       option.classList.add('errada');
     }
     
-    // Remove a classe de seleção temporária
     option.classList.remove('selecionada');
   });
   
-  // 2. Mostrar a resolução
+  let feedbackHTML = acertou 
+    ? `<div class="quiz-feedback acerto">✅ Parabéns, você acertou!</div>`
+    : `<div class="quiz-feedback erro">❌ Resposta incorreta. A correta era a ${q.correta}.</div>`;
+	
   const resolucao = `<div class="quiz-resolucao"><strong>Resolução:</strong><br>${escapeHtml(q.resolucao || 'Nenhuma resolução cadastrada.')}</div>`;
-  resolucaoEl.innerHTML = resolucao;
+  resolucaoEl.innerHTML = feedbackHTML + resolucao; 
 
-  // 3. Remover o botão "Ver Resposta" e adicionar o "Próxima Questão"
   const quizActions = document.getElementById('quizActions');
   const btnVerResp = document.getElementById('btnVerResp');
   if(btnVerResp) btnVerResp.remove();
 
-  // Adiciona o botão Próxima Questão
   quizActions.innerHTML += `
     <button id="btnProx" onclick="proximaPergunta()" class="btn primary" style="margin-left: 10px;">Próxima Questão</button>
   `;
@@ -554,9 +565,7 @@ function proximaPergunta(){
   mostrarQuiz();
 }
 
-// NOVO: Pular Questão
 function pularPergunta(){
-  // Move a questão atual para o final do array, sem mudar o quizIndex
   const q = quizOrder.splice(quizIndex, 1)[0]; 
   quizOrder.push(q);
   mostrarQuiz(); 
@@ -567,7 +576,13 @@ function sairTreino(){
     stopTimer();
     inQuiz = false;
     quizTimerEl.style.display = 'none';
-    renderQuestions(); // Volta para a visualização normal (renderQuestions remove quiz-container)
+	
+    headerControls.style.display = 'flex';
+    // ALTERAÇÃO: Garante que o form continue escondido ao sair do treino
+    formContainer.style.display = 'none'; 
+    topBarControls.style.display = 'flex';
+    if(topBarControls2) topBarControls2.style.display = 'flex'; 
+    renderQuestions(); 
   }
 }
 
@@ -575,29 +590,28 @@ function sairTreino(){
    Event Listeners e Inicialização
 ----------------------------*/
 form.addEventListener('submit', saveQuestion);
-btnCancelar.addEventListener('click', clearForm);
+// ALTERAÇÃO: Botão Cancelar fecha o formulário
+btnCancelar.addEventListener('click', fecharFormulario); 
+
 btnExport.addEventListener('click', exportDB);
 btnImport.addEventListener('click', importDB);
 btnLimpar.addEventListener('click', clearDB);
-btnNovo.addEventListener('click', clearForm);
+// ALTERAÇÃO: Botão Novo abre o formulário
+btnNovo.addEventListener('click', abrirFormulario); 
+
 btnQuiz.addEventListener('click', initQuiz);
 fSearch.addEventListener('input', renderQuestions);
 fAssunto.addEventListener('change', renderQuestions);
-// NOVOS LISTENERS PARA OS NOVOS FILTROS
 fAno.addEventListener('change', renderQuestions);
 fBanca.addEventListener('change', renderQuestions);
 fDisciplina.addEventListener('change', renderQuestions);
-// NOVO: Listener do botão de tema
 themeToggle.addEventListener('click', toggleTheme); 
 
-
-// Inicialização e Registro do Service Worker
 function init(){
-  loadTheme(); // NOVO: Carrega a preferência de tema antes de renderizar
+  loadTheme(); 
   updateSubjectFilter();
   renderQuestions();
 
-  // Registro do Service Worker para o PWA
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('service-worker.js')
       .then(()=> console.log('Service Worker registrado com sucesso.'))
