@@ -12,6 +12,9 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body> 
+  <!-- Container de Toast Notifications -->
+  <div id="toastContainer"></div>
+
   <div class="wrap">
     <header>
       <h1>Banco de Questões</h1>
@@ -29,9 +32,10 @@
 
     <section class="grid">
       <div class="card">
+        <!-- Filtros -->
         <div class="top-bar">
           <div class="search">
-            <input id="fSearch" type="text" placeholder="Pesquisar...">
+            <input id="fSearch" type="text" placeholder="Pesquisar (enunciado, tags)...">
             <select id="fAssunto"></select>
           </div>
           <div class="search" style="margin-top: 5px; margin-bottom: 5px;">
@@ -39,7 +43,25 @@
             <select id="fBanca"></select>
             <select id="fAno"></select>
           </div>
-          <span id="quizTimer" class="quiz-timer" style="display: none;">00:00</span>
+          
+          <!-- Linha Extra: Opções de Treino e Revisão -->
+          <div class="search" style="margin-top: 5px; display:flex; align-items:center; gap: 15px;">
+             <label class="checkbox-label">
+                 <input type="checkbox" id="fRevisao"> 🚩 Apenas Revisão
+             </label>
+             
+             <div style="display:flex; align-items:center; gap:5px; margin-left: auto;">
+                 <label for="fQtdTreino" style="margin:0; font-size:0.85rem;">Treinar:</label>
+                 <select id="fQtdTreino" style="width:auto; padding:5px; margin:0;">
+                     <option value="10">10 questões</option>
+                     <option value="20">20 questões</option>
+                     <option value="50">50 questões</option>
+                     <option value="0">Todas</option>
+                 </select>
+             </div>
+             
+             <span id="quizTimer" class="quiz-timer" style="display: none;">00:00</span>
+          </div>
         </div>
         
         <p id="questoesCount" class="meta" style="margin: 0 0 10px 5px; font-weight: bold; min-height: 20px;"></p>
@@ -47,27 +69,33 @@
         <div id="lista" class="list">
           <p class="meta">Carregando questões...</p>
         </div>
+        
+        <!-- Controles de Paginação -->
+        <div id="paginationControls" class="pagination-controls" style="display:none;">
+            <button id="btnPrevPage" class="btn secondary">Anterior</button>
+            <span id="pageInfo" style="font-size: 0.9rem; color: var(--text-muted);"></span>
+            <button id="btnNextPage" class="btn secondary">Próxima</button>
+        </div>
 
         <div id="resultado" style="margin-top: 15px;"></div>
-        <div id="quizActions" style="text-align: right; margin-top: 10px;">
-          </div>
+        <div id="quizActions" style="text-align: right; margin-top: 10px;"></div>
       </div>
 
       <aside>
         <div id="formCard" class="card" style="display: none;">
           <form id="form">
             <h3>Adicionar / Editar Questão</h3>
-            <input id="qid" type="hidden"> <label>Disciplina
+            <input id="qid" type="hidden"> 
+            
+            <label>Disciplina
               <input id="disciplina" type="text" placeholder="Ex: Direito Constitucional">
             </label>
 
-            <label>Ano
-              <input id="ano" type="number" placeholder="Ex: 2023">
-            </label>
+            <div class="options">
+                <label style="margin-top:0;">Ano <input id="ano" type="number" placeholder="Ex: 2023"></label>
+                <label style="margin-top:0;">Banca <input id="banca" type="text" placeholder="Ex: CESPE"></label>
+            </div>
 
-            <label>Banca
-              <input id="banca" type="text" placeholder="Ex: CESPE">
-            </label>
             <label>Assunto (Ex: História Geral)
               <input id="assunto" type="text">
             </label>
@@ -75,10 +103,20 @@
             <label>Tópico (Ex: Revolução Francesa)
               <input id="topico" type="text">
             </label>
+            
+            <!-- Input de Imagem -->
+            <label>Imagem (Opcional - Máx 2MB)</label>
+            <input type="file" id="inpImagem" accept="image/*" style="margin-top:5px;">
+            <div style="margin-top:10px;">
+                <img id="imgPreview" src="" alt="Preview" style="max-width:100%; max-height:200px; display:none; border-radius:8px; border:1px solid var(--border);">
+                <button type="button" id="btnRemoverImg" class="btn secondary" style="display:none; margin-top:5px; font-size:0.8rem; padding:5px 10px;">Remover Imagem</button>
+            </div>
 
-            <label>Enunciado / Pergunta
-              <textarea id="enunciado"></textarea>
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                Enunciado / Pergunta
+                <button type="button" id="btnInsertImgTag" class="btn secondary" style="font-size:0.7rem; padding:2px 8px;">+ Inserir [IMAGEM]</button>
             </label>
+            <textarea id="enunciado"></textarea>
             
             <label>Opções</label>
             <div class="options">
@@ -112,8 +150,9 @@
         </div>
 
         <div class="card info">
-          <h4>Importante</h4>
-          <p>O banco funciona 100% local (localStorage). Você pode instalar como PWA no celular através do menu do seu navegador (ex: "Adicionar à tela inicial").</p>
+          <h4>Dicas</h4>
+          <p>🚩 Use o ícone de bandeira para adicionar questões à sua lista de revisão.</p>
+          <p>🖼️ Para posicionar a imagem no meio do texto, use o botão <b>+ Inserir [IMAGEM]</b>.</p>
         </div>
       </aside>
     </section>
