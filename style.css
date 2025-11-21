@@ -7,6 +7,7 @@
   --accent-light: rgba(15, 110, 253, 0.2); /* Destaque suave */
   --danger: #dc3545; /* Vermelho (Excluir) */
   --success: #28a745; /* Verde (Copiar/Acerto) */
+  --warning: #ffc107; /* Amarelo (Médio) */
   --text-primary: #c9d1d9; /* Texto principal */
   --text-muted: #8b949e; /* Texto secundário/meta */
   --shadow-color: rgba(0, 0, 0, 0.4); /* Cor da sombra */
@@ -21,6 +22,7 @@ body.light-mode {
   --accent-light: rgba(0, 122, 255, 0.15); 
   --danger: #e63946; 
   --success: #06d6a0; 
+  --warning: #ffb703;
   --text-primary: #212529; 
   --text-muted: #6c757d; 
   --shadow-color: rgba(0, 0, 0, 0.1); 
@@ -45,11 +47,16 @@ body {
 
 /* Header */
 header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   margin-bottom: 24px; 
-  flex-wrap: wrap; 
+}
+
+.header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
 }
 
 h1 {
@@ -57,12 +64,39 @@ h1 {
   font-size: 1.8rem;
 }
 
+/* Daily Goal Panel */
+.daily-goal-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    min-width: 200px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+.goal-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+.goal-bar-bg {
+    background: var(--border);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.goal-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--success));
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Controles e Botões */
 .controls {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 10px; 
 }
 
 button,
@@ -149,6 +183,11 @@ button:not(.btn.secondary):hover,
   min-width: 120px;
 }
 
+/* Notebook Controls */
+.notebook-controls select {
+  flex-grow: 1;
+}
+
 .checkbox-label {
     display: flex;
     align-items: center;
@@ -221,7 +260,7 @@ button:not(.btn.secondary):hover,
 }
 .meta b { color: var(--text-primary); }
 
-/* Tags e Stats */
+/* Tags e Badges */
 .tag {
   display: inline-block;
   background: var(--accent-light);
@@ -231,6 +270,12 @@ button:not(.btn.secondary):hover,
   font-size: 0.75rem;
   margin-right: 4px;
   font-weight: 500;
+  cursor: pointer; /* Tags clicáveis */
+  transition: 0.2s;
+}
+.tag:hover {
+    background: var(--accent);
+    color: #fff;
 }
 
 .stats-badge {
@@ -243,6 +288,18 @@ button:not(.btn.secondary):hover,
     margin-left: 8px;
     border: 1px solid rgba(255,255,255,0.1);
 }
+
+/* Badges de Dificuldade */
+.badge-diff {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-left: 6px;
+}
+.diff-facil { background: rgba(40, 167, 69, 0.2); color: var(--success); border: 1px solid var(--success); }
+.diff-media { background: rgba(255, 193, 7, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+.diff-dificil { background: rgba(220, 53, 69, 0.2); color: var(--danger); border: 1px solid var(--danger); }
 
 .actions {
   display: flex;
@@ -290,7 +347,6 @@ input[type="text"], input[type="number"], textarea, select {
   animation: fadeIn 0.3s ease;
 }
 
-/* ALTERAÇÃO: Forçando quebra de linha nos botões de opção */
 .quiz-option {
   width: 100%;
   text-align: left;
@@ -302,11 +358,9 @@ input[type="text"], input[type="number"], textarea, select {
   font-size: 1rem;
   transition: 0.2s;
   margin-bottom: 8px;
-  
-  /* Correção do transbordo */
-  white-space: normal;  /* Permite que o texto desça para a próxima linha */
-  word-break: break-word; /* Quebra palavras muito longas se necessário */
-  line-height: 1.5; /* Melhora a leitura de múltiplas linhas */
+  white-space: normal;  
+  word-break: break-word; 
+  line-height: 1.5; 
 }
 
 .quiz-option:hover { background: var(--border); }
@@ -333,6 +387,51 @@ input[type="text"], input[type="number"], textarea, select {
 }
 .quiz-feedback.acerto { background: rgba(40, 167, 69, 0.2); color: var(--success); border: 1px solid var(--success); }
 .quiz-feedback.erro { background: rgba(220, 53, 69, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+
+/* MODAL DE ESTATÍSTICAS */
+dialog.modal {
+  background: var(--card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+dialog.modal::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content { padding: 20px; }
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+.modal-header h2 { margin: 0; font-size: 1.2rem; }
+
+.modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Barras de Progresso */
+.progress-bar {
+  background: var(--border);
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+.stat-box p { margin: 5px 0; }
 
 /* Paginação */
 .pagination-controls {
@@ -383,6 +482,8 @@ input[type="text"], input[type="number"], textarea, select {
 
 @media (max-width: 600px) {
     #toastContainer { left: 20px; right: 20px; bottom: 20px; align-items: center; }
+    .header-top { justify-content: center; }
+    .daily-goal-panel { width: 100%; margin-bottom: 10px; }
     .header-meta { flex-direction: column-reverse; gap: 5px; }
     .header-meta > div { width: 100%; }
     .header-meta > div:last-child { text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }

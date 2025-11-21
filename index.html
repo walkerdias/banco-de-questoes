@@ -17,16 +17,29 @@
 
   <div class="wrap">
     <header>
-      <h1>Banco de Questões</h1>
+      <div class="header-top">
+          <h1>Banco de Questões</h1>
+          <!-- NOVO: Meta Diária -->
+          <div id="dailyGoalPanel" class="daily-goal-panel" title="Sua meta de questões resolvidas hoje">
+              <div class="goal-info">
+                  <span>🎯 Meta Diária</span>
+                  <span id="goalText">0/20</span>
+              </div>
+              <div class="goal-bar-bg">
+                  <div id="goalBarFill" class="goal-bar-fill" style="width: 0%;"></div>
+              </div>
+          </div>
+      </div>
 
       <div class="controls">
-        <button id="themeToggle" class="btn secondary">🌙 Modo Escuro</button>
+        <button id="themeToggle" class="btn secondary" title="Alternar Tema">🌙</button>
+        <button id="btnStats" class="btn secondary">📊 Estatísticas</button>
         
         <button id="btnNovo">+ Nova questão</button>
         <button id="btnQuiz" class="btn secondary">Modo treino</button>
-        <button id="btnExport" class="btn secondary">Exportar JSON</button>
-        <button id="btnImport" class="btn secondary">Importar JSON</button>
-        <button id="btnLimpar" class="btn secondary" style="background: var(--danger)">Limpar tudo</button>
+        <button id="btnExport" class="btn secondary">Exportar</button>
+        <button id="btnImport" class="btn secondary">Importar</button>
+        <button id="btnLimpar" class="btn secondary" style="background: var(--danger)">Limpar</button>
       </div>
     </header>
 
@@ -42,26 +55,40 @@
             <select id="fDisciplina"></select>
             <select id="fBanca"></select>
             <select id="fAno"></select>
+            <!-- NOVO: Filtro de Dificuldade -->
+            <select id="fDificuldade" style="max-width: 110px;">
+                <option value="">Dificuldade</option>
+                <option value="Fácil">🟢 Fácil</option>
+                <option value="Média">🟡 Média</option>
+                <option value="Difícil">🔴 Difícil</option>
+            </select>
           </div>
           
-          <!-- Linha Extra: Opções de Treino e Revisão -->
-          <div class="search" style="margin-top: 5px; display:flex; align-items:center; gap: 15px;">
-             <label class="checkbox-label">
-                 <input type="checkbox" id="fRevisao"> 🚩 Apenas Revisão
+          <!-- Linha Extra: Cadernos, Treino e Revisão -->
+          <div class="search" style="margin-top: 5px; display:flex; align-items:center; gap: 10px; flex-wrap: wrap;">
+             <div class="notebook-controls" style="display: flex; gap: 5px; flex-grow: 1; align-items: center;">
+                <select id="savedFilters" style="margin: 0; min-width: 150px;">
+                    <option value="">📂 Meus Cadernos...</option>
+                </select>
+                <button id="btnSaveFilter" class="btn secondary" style="padding: 8px 10px;" title="Salvar Filtro Atual">💾</button>
+                <button id="btnDeleteFilter" class="btn secondary" style="padding: 8px 10px; display:none; color: var(--danger);" title="Excluir Caderno">🗑️</button>
+             </div>
+
+             <label class="checkbox-label" style="white-space: nowrap;">
+                 <input type="checkbox" id="fRevisao"> 🚩 Revisão
              </label>
              
-             <div style="display:flex; align-items:center; gap:5px; margin-left: auto;">
-                 <label for="fQtdTreino" style="margin:0; font-size:0.85rem;">Treinar:</label>
+             <div style="display:flex; align-items:center; gap:5px;">
+                 <label for="fQtdTreino" style="margin:0; font-size:0.85rem;">Qtd:</label>
                  <select id="fQtdTreino" style="width:auto; padding:5px; margin:0;">
-                     <option value="10">10 questões</option>
-                     <option value="20">20 questões</option>
-                     <option value="50">50 questões</option>
-                     <option value="0">Todas</option>
+                     <option value="10">10</option>
+                     <option value="20">20</option>
+                     <option value="50">50</option>
+                     <option value="0">Tudo</option>
                  </select>
              </div>
           </div>
 
-          <!-- Container do Timer (Movido para fora dos filtros para melhor controle) -->
           <div id="timerContainer" style="display: none; text-align: center; margin: 10px 0;">
              <span id="quizTimer" class="quiz-timer">00:00</span>
           </div>
@@ -74,7 +101,6 @@
           <p class="meta">Carregando questões...</p>
         </div>
         
-        <!-- Controles de Paginação -->
         <div id="paginationControls" class="pagination-controls" style="display:none;">
             <button id="btnPrevPage" class="btn secondary">Anterior</button>
             <span id="pageInfo" style="font-size: 0.9rem; color: var(--text-muted);"></span>
@@ -107,9 +133,18 @@
             <label>Tópico (Ex: Revolução Francesa)
               <input id="topico" type="text">
             </label>
+
+            <!-- NOVO: Campo de Dificuldade -->
+            <label>Nível de Dificuldade
+                <select id="dificuldade">
+                    <option value="">-- Selecione --</option>
+                    <option value="Fácil">🟢 Fácil</option>
+                    <option value="Média">🟡 Média</option>
+                    <option value="Difícil">🔴 Difícil</option>
+                </select>
+            </label>
             
-            <!-- Input de Imagem -->
-            <label>Imagem (Opcional - Máx 2MB)</label>
+            <label>Imagem (Máx 800px - Compressão Automática)</label>
             <input type="file" id="inpImagem" accept="image/*" style="margin-top:5px;">
             <div style="margin-top:10px;">
                 <img id="imgPreview" src="" alt="Preview" style="max-width:100%; max-height:200px; display:none; border-radius:8px; border:1px solid var(--border);">
@@ -155,8 +190,11 @@
 
         <div class="card info">
           <h4>Dicas</h4>
-          <p>🚩 Use o ícone de bandeira para adicionar questões à sua lista de revisão.</p>
-          <p>🖼️ Para posicionar a imagem no meio do texto, use o botão <b>+ Inserir [IMAGEM]</b>.</p>
+          <p>📊 <b>Meta Diária:</b> Tente preencher a barra verde no topo da tela todo dia!</p>
+          <p>📄 <b>CSV:</b> Importe planilhas do Excel (separadas por ponto e vírgula).</p>
+          <p>🏷️ <b>Tags:</b> Clique nas tags das questões para filtrar rapidamente.</p>
+		  <p>📂 <b>Cadernos:</b> Configure os filtros (Banca, Matéria, etc) e clique no ícone 💾 para salvar como um caderno de estudos.</p>
+          <p>🚩 <b>Revisão:</b> Marque questões difíceis com a bandeira para revisar depois.</p>
         </div>
       </aside>
     </section>
@@ -164,7 +202,18 @@
     <div class="footer">Feito para te ajudar a estudar.</div>
   </div>
 
-  <input type="file" id="fileInput" accept=".json" style="display: none;">
+  <input type="file" id="fileInput" accept=".json, .csv" style="display: none;">
+
+  <!-- Modal de Estatísticas -->
+  <dialog id="statsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Estatísticas de Desempenho</h2>
+        <button id="btnCloseStats" class="btn secondary">Fechar</button>
+      </div>
+      <div id="statsBody" class="modal-body"></div>
+    </div>
+  </dialog>
 
   <script src="app.js"></script>
 </body>
