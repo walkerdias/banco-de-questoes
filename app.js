@@ -1,4 +1,4 @@
-// app.js — Versão 5.4 (Correção: Edição de Questão)
+// app.js — Versão 5.5 (Adicionado: Revisão no Modo Treino)
 
 "use strict";
 
@@ -14,7 +14,6 @@ const timerContainer = document.getElementById('timerContainer');
 const fileInput = document.getElementById('fileInput');
 const formContainer = document.getElementById('formCard'); 
 const headerControls = document.querySelector('header .controls'); 
-
 const questoesCountEl = document.getElementById('questoesCount');
 
 // Filtros
@@ -67,13 +66,11 @@ const themeToggle = document.getElementById('themeToggle');
 let BD = JSON.parse(localStorage.getItem('BD_QUESTOES') || '[]');
 let SAVED_FILTERS = JSON.parse(localStorage.getItem('BD_FILTROS') || '{}');
 let DAILY_GOAL = JSON.parse(localStorage.getItem('BD_DAILY_GOAL') || '{"date": "", "count": 0, "target": 20}');
-
 let inQuiz = false;
 let quizIndex = 0;
 let quizOrder = [];
 let timerInterval = null;
 let startTime = 0;
-
 let currentPage = 1;
 const ITEMS_PER_PAGE = 20;
 let questionsSinceBackup = 0;
@@ -182,10 +179,8 @@ function initQuiz(){
       if(paginationControls) paginationControls.style.display = 'none';
       if (questoesCountEl) questoesCountEl.style.display = 'none';
       document.querySelectorAll('.top-bar .search').forEach(el => el.style.display = 'none');
-      
       if(timerContainer) timerContainer.style.display = 'block';
-
-      const filteredForQuiz = getFilteredBD(); 
+	  const filteredForQuiz = getFilteredBD(); 
 
       if(filteredForQuiz.length === 0){
         showToast('Nenhuma questão para os filtros atuais.', 'error');
@@ -226,7 +221,6 @@ function mostrarQuiz(){
       const q = quizOrder[quizIndex];
       const total = quizOrder.length;
       const current = quizIndex + 1;
-      
       const resolucaoEl = document.getElementById('resultado');
       const quizActions = document.getElementById('quizActions');
 
@@ -252,12 +246,16 @@ function mostrarQuiz(){
       ].filter(opt => opt.texto && opt.texto.trim() !== ""); 
 
       const contentHtml = renderEnunciadoWithImage(q.enunciado, q.imagem, true);
+      
+      // --- ALTERAÇÃO AQUI: Botão de Revisão Adicionado ---
+      const revClass = q.revisao ? 'active' : '';
 
       lista.innerHTML = `
         <div class="card quiz-card">
-          <p class="meta" style="margin-bottom: 5px;">
-            Questão ${current}/${total}
-          </p>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+             <p class="meta" style="margin:0;">Questão ${current}/${total}</p>
+             <button id="btnQuizRev-${q.id}" class="btn-icon ${revClass}" onclick="toggleRevisao(${q.id}, true)" title="Marcar para Revisão">🚩</button>
+          </div>
           <p class="meta" style="margin-bottom: 15px;">
             ${escapeHtml(q.disciplina || 'Geral')} — ${escapeHtml(q.banca || 'N/A')} (${escapeHtml(q.ano || 'Ano')})
             <br>
@@ -275,6 +273,7 @@ function mostrarQuiz(){
           </div>
         </div>
       `;
+      // -----------------------------------------------------
       
       if(resolucaoEl) resolucaoEl.innerHTML = '';
       if(quizActions) {
@@ -298,7 +297,6 @@ function checarResposta(btn, letra, id){
   const opcoes = document.querySelectorAll('.quiz-option');
   opcoes.forEach(option => option.disabled = true);
   btn.classList.add('selecionada'); 
-  
   const quizActions = document.getElementById('quizActions');
   const btnPular = document.getElementById('btnPular');
   if(btnPular) btnPular.remove();
@@ -737,7 +735,6 @@ function editQ(id){
   const q = BD.find(x => x.id == id);
   if(!q) return;
 
-  // --- CORREÇÃO: Abre e LIMPA antes de preencher ---
   abrirFormulario(); 
 
   document.getElementById('qid').value = q.id;
@@ -775,14 +772,24 @@ function delQ(id){
   updateFilterOptions();
 }
 
-function toggleRevisao(id) {
+// --- ALTERAÇÃO AQUI: Suporte para o Quiz ---
+function toggleRevisao(id, isQuiz = false) {
     const index = BD.findIndex(q => q.id == id);
     if(index !== -1) {
         BD[index].revisao = !BD[index].revisao;
         saveBD();
-        renderQuestions();
+        
+        if(isQuiz){
+            // Se estiver no quiz, apenas troca a classe do botão visualmente
+            const btn = document.getElementById(`btnQuizRev-${id}`);
+            if(btn) btn.classList.toggle('active');
+        } else {
+            // Se estiver na lista normal, re-renderiza a lista
+            renderQuestions();
+        }
     }
 }
+// -------------------------------------------
 
 function copyQuestion(id){
   const q = BD.find(x => x.id == id);
