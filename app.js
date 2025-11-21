@@ -1,4 +1,4 @@
-// app.js — Versão 3.1 (Com Posicionamento de Imagem Customizado)
+// app.js — Versão 3.2 (Correção de Bug ao Sair do Treino + Layout Timer)
 
 "use strict";
 
@@ -10,11 +10,10 @@ const lista = document.getElementById('lista');
 const fAssunto = document.getElementById('fAssunto');
 const fSearch = document.getElementById('fSearch');
 const quizTimerEl = document.getElementById('quizTimer');
+const timerContainer = document.getElementById('timerContainer'); // NOVO: Container do Timer
 const fileInput = document.getElementById('fileInput');
 const formContainer = document.getElementById('formCard'); 
 const headerControls = document.querySelector('header .controls'); 
-const topBarControls = document.querySelector('.top-bar .search'); 
-const topBarControls2 = document.querySelector('.top-bar .search:nth-child(2)');
 
 const questoesCountEl = document.getElementById('questoesCount');
 
@@ -35,7 +34,7 @@ const paginationControls = document.getElementById('paginationControls');
 const inpImagem = document.getElementById('inpImagem');
 const imgPreview = document.getElementById('imgPreview');
 const btnRemoverImg = document.getElementById('btnRemoverImg');
-const btnInsertImgTag = document.getElementById('btnInsertImgTag'); // NOVO BOTÃO
+const btnInsertImgTag = document.getElementById('btnInsertImgTag');
 const txtEnunciado = document.getElementById('enunciado');
 
 const btnSalvar = document.getElementById('btnSalvar');
@@ -101,12 +100,10 @@ function formatTime(seconds) {
   return `${pad(minutes)}:${pad(remainingSeconds)}`;
 }
 
-// NOVA FUNÇÃO: Processa o texto e a imagem para decidir onde renderizar
 function renderEnunciadoWithImage(enunciado, imagemBase64, isQuiz = false) {
     const safeText = escapeHtml(enunciado);
     
     if (!imagemBase64) {
-        // Sem imagem, retorna apenas o texto formatado
         return safeText;
     }
 
@@ -115,15 +112,8 @@ function renderEnunciadoWithImage(enunciado, imagemBase64, isQuiz = false) {
     const placeHolder = '[IMAGEM]';
 
     if (safeText.includes(placeHolder)) {
-        // Se encontrou a tag [IMAGEM], substitui ela pela imagem real
         return safeText.replace(placeHolder, imgTag);
     } else {
-        // Padrão antigo: Imagem em cima + Texto em baixo
-        // Vamos retornar o HTML concatenado para ser inserido no innerHTML do container
-        // Nota: No código original o <p> envolvia o texto. Aqui vamos retornar a string bruta para ser envelopada depois ou já formatada.
-        // Para manter consistência com a função renderQuestions antiga, vamos retornar um objeto ou string especial?
-        // Simplificação: Vamos retornar o HTML "final" que vai dentro do <p> ou div principal.
-        
         return `${imgTag}<br>${safeText}`;
     }
 }
@@ -194,7 +184,6 @@ btnRemoverImg.addEventListener('click', function() {
   this.style.display = 'none';
 });
 
-// NOVO: Botão para inserir a tag [IMAGEM] onde o cursor estiver
 btnInsertImgTag.addEventListener('click', function() {
     const tag = " [IMAGEM] ";
     const startPos = txtEnunciado.selectionStart;
@@ -249,9 +238,13 @@ function renderQuestions(){
   
   lista.classList.remove('quiz-container');
   lista.classList.add('list'); 
+  
+  // CORREÇÃO DO BUG: Limpa os elementos do quiz que poderiam ter ficado na tela
+  document.getElementById('resultado').innerHTML = '';
+  document.getElementById('quizActions').innerHTML = '';
 
   const termo = fSearch.value.toLowerCase().trim();
-  const filteredBD = getFilteredBD(); // Usa a função centralizada
+  const filteredBD = getFilteredBD(); 
 
   // Atualiza contadores
   const total = filteredBD.length;
@@ -286,9 +279,6 @@ function renderQuestions(){
     const revClass = q.revisao ? 'active' : '';
     const revTitle = q.revisao ? 'Remover da Revisão' : 'Marcar para Revisão';
 
-    // Lógica de Imagem e Enunciado (NOVO)
-    // Se o usuário usou [IMAGEM], a imagem estará embutida no contentHtml.
-    // Se não, ela estará no topo do contentHtml.
     const contentHtml = renderEnunciadoWithImage(q.enunciado, q.imagem, false);
 
     return `
@@ -348,10 +338,6 @@ function updateFilterOptions() {
   const curAno = fAno.value;
   const curBanca = fBanca.value;
   const curDisciplina = fDisciplina.value;
-
-  // Para popular os selects, precisamos do BD inteiro filtrado parcialmente
-  // Mas para simplificar, vamos usar o BD global para extrair tudo por enquanto, ou criar função auxiliar getFilteredBD(ignore)
-  // Código anterior já tinha getFilteredBD, vamos mantê-lo abaixo.
   
   const listForAssunto = getFilteredBD('assunto');
   const assuntos = [...new Set(listForAssunto.map(q => q.assunto).filter(a => a))].sort();
@@ -617,14 +603,19 @@ function initQuiz(){
     return;
   }
   
+  // ESCONDE TUDO
   headerControls.style.display = 'none';
   formContainer.style.display = 'none';
-  topBarControls.style.display = 'none';
-  if(topBarControls2) topBarControls2.style.display = 'none';
   if(paginationControls) paginationControls.style.display = 'none';
   if (questoesCountEl) questoesCountEl.style.display = 'none';
 
-  const filteredForQuiz = getFilteredBD(); // Usa filtro atual
+  // ESCONDE TODAS AS LINHAS DE PESQUISA (Inclusive a de filtros avançados)
+  document.querySelectorAll('.top-bar .search').forEach(el => el.style.display = 'none');
+  
+  // MOSTRA O CONTAINER DO TIMER
+  if(timerContainer) timerContainer.style.display = 'block';
+
+  const filteredForQuiz = getFilteredBD(); 
 
   if(filteredForQuiz.length === 0){
     showToast('Nenhuma questão para os filtros atuais.', 'error');
@@ -681,7 +672,6 @@ function mostrarQuiz(){
     { letra: 'E', texto: q.E }
   ].filter(opt => opt.texto); 
 
-  // Lógica da Imagem (NOVO)
   const contentHtml = renderEnunciadoWithImage(q.enunciado, q.imagem, true);
 
   lista.innerHTML = `
@@ -801,8 +791,13 @@ function sairTreino(askConfirm = true){
 
   headerControls.style.display = 'flex';
   formContainer.style.display = 'none'; 
-  topBarControls.style.display = 'flex';
-  if(topBarControls2) topBarControls2.style.display = 'flex'; 
+  
+  // MOSTRA TODAS AS LINHAS DE PESQUISA NOVAMENTE
+  document.querySelectorAll('.top-bar .search').forEach(el => el.style.display = 'flex');
+  
+  // ESCONDE O CONTAINER DO TIMER
+  if(timerContainer) timerContainer.style.display = 'none';
+
   renderQuestions(); 
 }
 
