@@ -433,6 +433,85 @@ dialog.modal::backdrop {
 }
 .stat-box p { margin: 5px 0; }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+.stat-card {
+  background: var(--bg);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.stat-card h3 {
+  margin: 0 0 5px 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.stat-card .value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.stat-card.success .value { color: var(--success); }
+.stat-card.danger .value { color: var(--danger); }
+
+.stat-section-title {
+    margin: 25px 0 10px 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    font-weight: 600;
+}
+
+/* Tabela de Disciplinas */
+.stat-table-container {
+    overflow-x: auto;
+}
+.stat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 300px;
+}
+.stat-table th { 
+    text-align: left; 
+    color: var(--text-muted); 
+    padding: 10px 8px; 
+    border-bottom: 2px solid var(--border); 
+    font-weight: 600;
+}
+.stat-table td { 
+    padding: 10px 8px; 
+    border-bottom: 1px solid var(--border); 
+    color: var(--text-primary);
+}
+
+.mini-progress-track {
+    background: var(--border); 
+    height: 6px;
+    width: 80px;
+    border-radius: 3px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+    overflow: hidden;
+}
+.mini-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+}
+
 /* Paginação */
 .pagination-controls {
     display: flex;

@@ -14,6 +14,7 @@ const timerContainer = document.getElementById('timerContainer');
 const fileInput = document.getElementById('fileInput');
 const formContainer = document.getElementById('formCard'); 
 const headerControls = document.querySelector('header .controls'); 
+
 const questoesCountEl = document.getElementById('questoesCount');
 
 // Filtros
@@ -66,11 +67,13 @@ const themeToggle = document.getElementById('themeToggle');
 let BD = JSON.parse(localStorage.getItem('BD_QUESTOES') || '[]');
 let SAVED_FILTERS = JSON.parse(localStorage.getItem('BD_FILTROS') || '{}');
 let DAILY_GOAL = JSON.parse(localStorage.getItem('BD_DAILY_GOAL') || '{"date": "", "count": 0, "target": 20}');
+
 let inQuiz = false;
 let quizIndex = 0;
 let quizOrder = [];
 let timerInterval = null;
 let startTime = 0;
+
 let currentPage = 1;
 const ITEMS_PER_PAGE = 20;
 let questionsSinceBackup = 0;
@@ -179,8 +182,10 @@ function initQuiz(){
       if(paginationControls) paginationControls.style.display = 'none';
       if (questoesCountEl) questoesCountEl.style.display = 'none';
       document.querySelectorAll('.top-bar .search').forEach(el => el.style.display = 'none');
+      
       if(timerContainer) timerContainer.style.display = 'block';
-	  const filteredForQuiz = getFilteredBD(); 
+
+      const filteredForQuiz = getFilteredBD(); 
 
       if(filteredForQuiz.length === 0){
         showToast('Nenhuma questão para os filtros atuais.', 'error');
@@ -221,6 +226,7 @@ function mostrarQuiz(){
       const q = quizOrder[quizIndex];
       const total = quizOrder.length;
       const current = quizIndex + 1;
+      
       const resolucaoEl = document.getElementById('resultado');
       const quizActions = document.getElementById('quizActions');
 
@@ -297,6 +303,7 @@ function checarResposta(btn, letra, id){
   const opcoes = document.querySelectorAll('.quiz-option');
   opcoes.forEach(option => option.disabled = true);
   btn.classList.add('selecionada'); 
+  
   const quizActions = document.getElementById('quizActions');
   const btnPular = document.getElementById('btnPular');
   if(btnPular) btnPular.remove();
@@ -657,13 +664,130 @@ function updateDailyGoalUI() {
     if(perc >= 100) goalBarFill.style.background = 'var(--success)';
 }
 
+// --- NOVA FUNÇÃO DE ESTATÍSTICAS DETALHADAS ---
 function showStats() {
-    let total = BD.length;
-    let resolv = BD.reduce((acc, q) => acc + (q.stats ? (q.stats.correct+q.stats.wrong) : 0), 0);
-    let html = `<p>Total Questões: ${total}</p><p>Resoluções: ${resolv}</p>`;
+    // 1. Cálculos Gerais
+    const totalQuestions = BD.length;
+    let totalAttempts = 0;
+    let totalCorrect = 0;
+    let totalWrong = 0;
+    let uniqueAnswered = 0;
+
+    // Mapa para agrupar por disciplina
+    const discMap = {};
+
+    BD.forEach(q => {
+        // Verifica se a questão tem estatísticas
+        if(q.stats) {
+            const c = q.stats.correct || 0;
+            const w = q.stats.wrong || 0;
+            const t = c + w;
+            
+            if(t > 0) {
+                uniqueAnswered++;
+                totalCorrect += c;
+                totalWrong += w;
+                totalAttempts += t;
+
+                // Agrupa por disciplina
+                const disc = q.disciplina ? q.disciplina.trim() : 'Sem Disciplina';
+                if(!discMap[disc]) discMap[disc] = { correct: 0, wrong: 0 };
+                discMap[disc].correct += c;
+                discMap[disc].wrong += w;
+            }
+        }
+    });
+
+    const accuracy = totalAttempts > 0 ? ((totalCorrect / totalAttempts) * 100).toFixed(1) : "0.0";
+    const bankProgress = totalQuestions > 0 ? ((uniqueAnswered / totalQuestions) * 100).toFixed(1) : "0.0";
+
+    // 2. Construção do HTML do Modal
+    let html = `
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Banco</h3>
+                <div class="value">${totalQuestions}</div>
+            </div>
+             <div class="stat-card">
+                <h3>Respondidas</h3>
+                <div class="value" title="${uniqueAnswered} questões únicas">${uniqueAnswered}</div>
+            </div>
+             <div class="stat-card success">
+                <h3>Acertos</h3>
+                <div class="value">${totalCorrect}</div>
+            </div>
+             <div class="stat-card danger">
+                <h3>Erros</h3>
+                <div class="value">${totalWrong}</div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <span style="font-weight:bold; color:var(--text-primary)">Taxa de Acerto: ${accuracy}%</span>
+            <span style="font-size:0.9rem; color:var(--text-muted)">Progresso do Banco: ${bankProgress}%</span>
+        </div>
+        
+        <!-- Barra de Progresso Visual (Acertos vs Erros) -->
+        <div style="background: var(--border); height: 12px; border-radius: 6px; overflow: hidden; display:flex; margin-bottom: 5px;">
+            <div style="width: ${accuracy}%; background: var(--success); height: 100%;" title="Acertos"></div>
+            <div style="width: ${100 - accuracy}%; background: var(--danger); height: 100%;" title="Erros"></div>
+        </div>
+        <small style="color:var(--text-muted);">Visualização da proporção de Acertos (Verde) vs Erros (Vermelho)</small>
+    `;
+
+    // 3. Tabela por Disciplina
+    html += `<h3 class="stat-section-title">Desempenho por Disciplina</h3>`;
+    
+    // Converte o mapa em lista e ordena pelas que tem mais resoluções
+    const discArray = Object.keys(discMap).map(key => ({
+        name: key,
+        ...discMap[key],
+        total: discMap[key].correct + discMap[key].wrong
+    })).sort((a,b) => b.total - a.total);
+
+    if(discArray.length === 0) {
+        html += `<p style="text-align:center; color:var(--text-muted); padding: 20px;">Nenhuma questão respondida ainda.</p>`;
+    } else {
+        html += `<div class="stat-table-container"><table class="stat-table">
+            <thead>
+                <tr>
+                    <th>Disciplina</th>
+                    <th>Resoluções</th>
+                    <th>C / E</th>
+                    <th>% Acerto</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        discArray.forEach(d => {
+            const discAcc = ((d.correct / d.total) * 100).toFixed(0);
+            const colorBar = discAcc >= 70 ? 'var(--success)' : (discAcc >= 40 ? 'var(--warning)' : 'var(--danger)');
+            
+            html += `
+                <tr>
+                    <td>${escapeHtml(d.name)}</td>
+                    <td style="text-align:center;">${d.total}</td>
+                    <td><span style="color:var(--success); font-weight:bold;">${d.correct}</span> / <span style="color:var(--danger); font-weight:bold;">${d.wrong}</span></td>
+                    <td>
+                        <div style="display:flex; align-items:center;">
+                            <div class="mini-progress-track">
+                                <div class="mini-progress-fill" style="width:${discAcc}%; background: ${colorBar};"></div>
+                            </div>
+                            <span>${discAcc}%</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table></div>`;
+    }
+
     if(statsBody) statsBody.innerHTML = html;
     if(statsModal) statsModal.showModal();
 }
+// ---------------------------------------------
+
 if(btnStats) btnStats.addEventListener('click', showStats);
 if(btnCloseStats) btnCloseStats.addEventListener('click', () => statsModal.close());
 
