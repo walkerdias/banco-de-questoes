@@ -1,6 +1,6 @@
-const CACHE_NAME = "banco-questoes-ghpages-v4"; // Mudei a versão para forçar atualização
+const CACHE_NAME = "banco-questoes-ghpages-v8.7-fixstats"; // Cache atualizado
 const FILES = [
-  "./",                 // IMPORTANTE: Cacheia a raiz do site (ex: /banco-de-questoes/)
+  "./",                 
   "./index.html",
   "./style.css",
   "./app.js",
@@ -9,23 +9,24 @@ const FILES = [
   "./icons/icon-512x512.png"
 ];
 
-// Instalação: Baixa os arquivos para o cache
+// Instalação
 self.addEventListener("install", e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log("Caching arquivos...");
+      console.log("Caching arquivos v8.7..."); 
       return cache.addAll(FILES);
     })
   );
-  self.skipWaiting(); // Força o novo SW a assumir imediatamente
+  self.skipWaiting(); 
 });
 
-// Ativação: Limpa caches antigos para não ocupar espaço
+// Ativação e Limpeza
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys().then(keyList => {
       return Promise.all(keyList.map(key => {
         if (key !== CACHE_NAME) {
+          console.log("Removendo cache antigo:", key);
           return caches.delete(key);
         }
       }));
@@ -34,14 +35,11 @@ self.addEventListener("activate", e => {
   return self.clients.claim();
 });
 
-// Fetch: Intercepta as requisições
+// Fetch
 self.addEventListener("fetch", e => {
   e.respondWith(
     caches.match(e.request).then(response => {
-      // Se estiver no cache, retorna o cache. Se não, tenta a rede.
       return response || fetch(e.request).catch(() => {
-        // Se estiver offline e o arquivo não estiver no cache:
-        // Retorna a página inicial se for uma navegação (opcional, mas útil)
         if (e.request.mode === 'navigate') {
             return caches.match('./index.html');
         }

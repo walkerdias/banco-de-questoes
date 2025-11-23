@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Banco de Questões</title>
+  <title>Banco de Questões & Flashcards</title>
 
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1117"/> 
@@ -18,15 +18,29 @@
   <div class="wrap">
     <header>
       <div class="header-top">
-          <h1>Banco de Questões</h1>
-          <!-- NOVO: Meta Diária -->
+          <div style="display:flex; flex-direction: column; gap: 5px;">
+            <h1>Questões & Cards</h1>
+            <!-- Seletor de Modo (Logo abaixo do título) -->
+            <div class="mode-selector">
+                <button id="btnModeQuestao" class="btn primary mode-active">📝 Questões</button>
+                <button id="btnModeFlashcard" class="btn secondary">🃏 Flashcards</button>
+            </div>
+          </div>
+
+          <!-- Meta Diária no Topo -->
           <div id="dailyGoalPanel" class="daily-goal-panel" title="Sua meta de questões resolvidas hoje">
-              <div class="goal-info">
-                  <span>🎯 Meta Diária</span>
-                  <span id="goalText">0/20</span>
+              <div class="goal-header">
+                  <div class="goal-label">
+                    <span class="goal-icon">🎯</span> Meta
+                  </div>
+                  <div class="goal-numbers">
+                    <span id="goalText" class="goal-counter">0/20</span>
+                  </div>
               </div>
               <div class="goal-bar-bg">
-                  <div id="goalBarFill" class="goal-bar-fill" style="width: 0%;"></div>
+                  <div id="goalBarFill" class="goal-bar-fill" style="width: 0%;">
+                     <div class="goal-glare"></div>
+                  </div>
               </div>
           </div>
       </div>
@@ -35,8 +49,10 @@
         <button id="themeToggle" class="btn secondary" title="Alternar Tema">🌙</button>
         <button id="btnStats" class="btn secondary">📊 Estatísticas</button>
         
-        <button id="btnNovo">+ Nova questão</button>
-        <button id="btnQuiz" class="btn secondary">Modo treino</button>
+        <button id="btnNovo">+ Novo</button>
+        <!-- O texto deste botão muda via JS dependendo do modo -->
+        <button id="btnQuiz" class="btn secondary">Modo Treino</button> 
+        
         <button id="btnExport" class="btn secondary">Exportar</button>
         <button id="btnImport" class="btn secondary">Importar</button>
         <button id="btnLimpar" class="btn secondary" style="background: var(--danger)">Limpar</button>
@@ -44,74 +60,144 @@
     </header>
 
     <section class="grid">
-      <div class="card">
-        <!-- Filtros -->
-        <div class="top-bar">
-          <div class="search">
-            <input id="fSearch" type="text" placeholder="Pesquisar (enunciado, tags)...">
-            <select id="fAssunto"></select>
-          </div>
-          <div class="search" style="margin-top: 5px; margin-bottom: 5px;">
-            <select id="fDisciplina"></select>
-            <select id="fBanca"></select>
-            <select id="fAno"></select>
-            <!-- NOVO: Filtro de Dificuldade -->
-            <select id="fDificuldade" style="max-width: 110px;">
-                <option value="">Dificuldade</option>
-                <option value="Fácil">🟢 Fácil</option>
-                <option value="Média">🟡 Média</option>
-                <option value="Difícil">🔴 Difícil</option>
-            </select>
-          </div>
-          
-          <!-- Linha Extra: Cadernos, Treino e Revisão -->
-          <div class="search" style="margin-top: 5px; display:flex; align-items:center; gap: 10px; flex-wrap: wrap;">
-             <div class="notebook-controls" style="display: flex; gap: 5px; flex-grow: 1; align-items: center;">
-                <select id="savedFilters" style="margin: 0; min-width: 150px;">
-                    <option value="">📂 Meus Cadernos...</option>
+      <!-- ÁREA PRINCIPAL (CARTÕES E LISTAS) -->
+      <div class="card" id="mainCard">
+        
+        <!-- ======================= -->
+        <!-- SEÇÃO: QUESTÕES -->
+        <!-- ======================= -->
+        <div id="sectionQuestoes">
+            <!-- Filtros -->
+            <div class="top-bar">
+            <div class="search">
+                <input id="fSearch" type="text" placeholder="Pesquisar (enunciado, tags)...">
+            </div>
+            
+            <!-- Filtros em Cascata -->
+            <div class="search" style="margin-top: 5px; margin-bottom: 5px;">
+                <select id="fDisciplina">
+                    <option value="">Todas as disciplinas</option>
                 </select>
-                <button id="btnSaveFilter" class="btn secondary" style="padding: 8px 10px;" title="Salvar Filtro Atual">💾</button>
-                <button id="btnDeleteFilter" class="btn secondary" style="padding: 8px 10px; display:none; color: var(--danger);" title="Excluir Caderno">🗑️</button>
-             </div>
+                <select id="fAssunto">
+                    <option value="">Todos os assuntos</option>
+                </select>
+            </div>
 
-             <label class="checkbox-label" style="white-space: nowrap;">
-                 <input type="checkbox" id="fRevisao"> 🚩 Revisão
-             </label>
-             
-             <div style="display:flex; align-items:center; gap:5px;">
-                 <label for="fQtdTreino" style="margin:0; font-size:0.85rem;">Qtd:</label>
-                 <select id="fQtdTreino" style="width:auto; padding:5px; margin:0;">
-                     <option value="10">10</option>
-                     <option value="20">20</option>
-                     <option value="50">50</option>
-                     <option value="0">Tudo</option>
-                 </select>
-             </div>
-          </div>
+            <div class="search" style="margin-top: 5px; margin-bottom: 5px;">
+                <select id="fBanca"></select>
+                <select id="fAno"></select>
+                <select id="fDificuldade" style="max-width: 130px;">
+                    <option value="">Dificuldade</option>
+                    <option value="Fácil">🟢 Fácil</option>
+                    <option value="Média">🟡 Média</option>
+                    <option value="Difícil">🔴 Difícil</option>
+                </select>
+            </div>
+            
+            <div class="search" style="margin-top: 5px; display:flex; align-items:center; gap: 10px; flex-wrap: wrap;">
+                <div class="notebook-controls" style="display: flex; gap: 5px; flex-grow: 1; align-items: center;">
+                    <select id="savedFilters" style="margin: 0; min-width: 150px;">
+                        <option value="">📂 Meus Cadernos...</option>
+                    </select>
+                    <button id="btnSaveFilter" class="btn secondary" style="padding: 8px 10px;" title="Salvar Filtro Atual">💾</button>
+                    <button id="btnDeleteFilter" class="btn secondary" style="padding: 8px 10px; display:none; color: var(--danger);" title="Excluir Caderno">🗑️</button>
+                </div>
 
-          <div id="timerContainer" style="display: none; text-align: center; margin: 10px 0;">
-             <span id="quizTimer" class="quiz-timer">00:00</span>
-          </div>
+                <label class="checkbox-label" style="white-space: nowrap;">
+                    <input type="checkbox" id="fRevisao"> 🚩 Revisão
+                </label>
+                
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <label for="fQtdTreino" style="margin:0; font-size:0.85rem;">Qtd:</label>
+                    <select id="fQtdTreino" style="width:auto; padding:5px; margin:0;">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="0">Tudo</option>
+                    </select>
+                </div>
+            </div>
 
+            <div id="timerContainer" style="display: none; text-align: center; margin: 10px 0;">
+                <span id="quizTimer" class="quiz-timer">00:00</span>
+            </div>
+            </div>
+            
+            <p id="questoesCount" class="meta" style="margin: 0 0 10px 5px; font-weight: bold; min-height: 20px;"></p>
+            
+            <div id="lista" class="list">
+            <p class="meta">Carregando questões...</p>
+            </div>
+            
+            <div id="paginationControls" class="pagination-controls" style="display:none;">
+                <button id="btnPrevPage" class="btn secondary">Anterior</button>
+                <span id="pageInfo" style="font-size: 0.9rem; color: var(--text-muted);"></span>
+                <button id="btnNextPage" class="btn secondary">Próxima</button>
+            </div>
+
+            <div id="resultado" style="margin-top: 15px;"></div>
+            <div id="quizActions" style="text-align: right; margin-top: 10px;"></div>
         </div>
-        
-        <p id="questoesCount" class="meta" style="margin: 0 0 10px 5px; font-weight: bold; min-height: 20px;"></p>
-        
-        <div id="lista" class="list">
-          <p class="meta">Carregando questões...</p>
-        </div>
-        
-        <div id="paginationControls" class="pagination-controls" style="display:none;">
-            <button id="btnPrevPage" class="btn secondary">Anterior</button>
-            <span id="pageInfo" style="font-size: 0.9rem; color: var(--text-muted);"></span>
-            <button id="btnNextPage" class="btn secondary">Próxima</button>
-        </div>
+        <!-- FIM SEÇÃO QUESTÕES -->
 
-        <div id="resultado" style="margin-top: 15px;"></div>
-        <div id="quizActions" style="text-align: right; margin-top: 10px;"></div>
+
+        <!-- ======================= -->
+        <!-- SEÇÃO: FLASHCARDS -->
+        <!-- ======================= -->
+        <div id="sectionFlashcards" style="display: none;">
+            
+            <!-- Player do Flashcard -->
+            <div id="fcPlayer" style="display: none;">
+                <div class="fc-scene">
+                    <div class="fc-card" id="fcCardElement">
+                        <div class="fc-face fc-front">
+                            <span class="fc-label">FRENTE</span>
+                            <div id="fcContentFront"></div>
+                            <div class="fc-instruction">(Clique para virar)</div>
+                        </div>
+                        <div class="fc-face fc-back">
+                            <span class="fc-label">VERSO</span>
+                            <div id="fcContentBack"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fc-controls">
+                    <button id="btnFcPrev" class="btn secondary">❮ Anterior</button>
+                    <button id="btnFcFlip" class="btn primary">🔄 Virar</button>
+                    <button id="btnFcNext" class="btn secondary">Próximo ❯</button>
+                </div>
+                <button id="btnFcExit" class="btn secondary" style="width:100%; margin-top:10px;">Sair do Estudo</button>
+            </div>
+
+            <!-- Lista de Flashcards -->
+            <div id="fcListContainer">
+                <div class="search">
+                     <input id="fcSearch" type="text" placeholder="Pesquisar Flashcards...">
+                </div>
+                
+                <!-- Filtros Flashcards -->
+                <div class="search" style="margin-top: 5px;">
+                    <select id="fcDisciplinaFilter">
+                        <option value="">Todas as disciplinas</option>
+                    </select>
+                    <select id="fcAssuntoFilter">
+                        <option value="">Todos os assuntos</option>
+                    </select>
+                </div>
+
+                <p id="fcCount" class="meta" style="margin: 10px 0;"></p>
+                <div id="listaFlashcards" class="list">
+                    <!-- Itens renderizados via JS -->
+                </div>
+            </div>
+        </div>
+        <!-- FIM SEÇÃO FLASHCARDS -->
+
       </div>
 
       <aside>
+        <!-- FORMULÁRIO QUESTÃO -->
         <div id="formCard" class="card" style="display: none;">
           <form id="form">
             <h3>Adicionar / Editar Questão</h3>
@@ -134,7 +220,6 @@
               <input id="topico" type="text">
             </label>
 
-            <!-- NOVO: Campo de Dificuldade -->
             <label>Nível de Dificuldade
                 <select id="dificuldade">
                     <option value="">-- Selecione --</option>
@@ -144,7 +229,7 @@
                 </select>
             </label>
             
-            <label>Imagem (Máx 800px - Compressão Automática)</label>
+            <label>Imagem (Máx 800px)</label>
             <input type="file" id="inpImagem" accept="image/*" style="margin-top:5px;">
             <div style="margin-top:10px;">
                 <img id="imgPreview" src="" alt="Preview" style="max-width:100%; max-height:200px; display:none; border-radius:8px; border:1px solid var(--border);">
@@ -182,16 +267,48 @@
             </label>
 
             <div class="form-actions">
-              <button id="btnSalvar" class="btn primary">Salvar</button>
+              <button id="btnSalvar" class="btn primary">Salvar Questão</button>
               <button id="btnCancelar" type="button" class="btn secondary">Cancelar</button>
             </div>
           </form>
         </div>
 
+        <!-- NOVO: FORMULÁRIO FLASHCARD -->
+        <div id="formCardFC" class="card" style="display: none;">
+            <form id="formFC">
+              <h3>Novo Flashcard</h3>
+              <input id="fcId" type="hidden"> 
+              
+              <label>Disciplina
+                <input id="fcDisciplina" type="text" placeholder="Ex: Direito Administrativo">
+              </label>
+
+              <label>Assunto / Título
+                <input id="fcAssunto" type="text" placeholder="Ex: Atos Administrativos">
+              </label>
+  
+              <label>FRENTE (Pergunta / Conceito)
+                <textarea id="fcFrente" rows="4" placeholder="O que vai aparecer primeiro..."></textarea>
+              </label>
+  
+              <label>VERSO (Resposta / Explicação)
+                <textarea id="fcVerso" rows="6" placeholder="A resposta que aparece ao virar..."></textarea>
+              </label>
+  
+              <div class="form-actions">
+                <button type="submit" class="btn primary">Salvar Flashcard</button>
+                <button type="button" id="btnCancelarFC" class="btn secondary">Cancelar</button>
+              </div>
+            </form>
+          </div>
+
         <div class="card info">
           <h4>Dicas</h4>
+          <p>📝 <b>Modos:</b> Use os botões no topo para alternar entre Questões e Flashcards.</p>
           <p>📊 <b>Meta Diária:</b> Tente preencher a barra verde no topo da tela todo dia!</p>
-          <p>📄 <b>CSV:</b> Importe planilhas do Excel (separadas por ponto e vírgula).</p>
+		  <p>💾 <b>Exportar:</b> O backup agora salva suas Questões E seus Flashcards juntos.</p>
+          <p>🃏 <b>Flashcards:</b> Ótimo para memorizar conceitos rápidos.</p>
+		  <p>📄 <b>CSV:</b> Importe planilhas do Excel (separadas por ponto e vírgula).</p>
           <p>🏷️ <b>Tags:</b> Clique nas tags das questões para filtrar rapidamente.</p>
 		  <p>📂 <b>Cadernos:</b> Configure os filtros (Banca, Matéria, etc) e clique no ícone 💾 para salvar como um caderno de estudos.</p>
           <p>🚩 <b>Revisão:</b> Marque questões difíceis com a bandeira para revisar depois.</p>
