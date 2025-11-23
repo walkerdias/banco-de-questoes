@@ -354,6 +354,16 @@ input[type="text"], input[type="number"], textarea, select { width: 100%; paddin
 }
 /* ------------------------------------- */
 
+/* PAGINAÇÃO (Restaurado) */
+.pagination-controls {
+    display: flex;
+    justify-content: center; /* Centraliza */
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+}
 
 /* Modal, Toast e Scrollbar */
 dialog.modal { background: var(--card); color: var(--text-primary); border: 1px solid var(--border); border-radius: 12px; padding: 0; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }

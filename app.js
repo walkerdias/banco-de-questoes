@@ -14,7 +14,7 @@ if ('serviceWorker' in navigator) {
 
 window.onload = function() {
     setTimeout(() => {
-        showToast("✅ ATUALIZADO V8.1 - ESTATÍSTICAS CORRIGIDAS", "success");
+        showToast("✅ ATUALIZADO V8.1", "success");
     }, 500);
 }
 
