@@ -1,4 +1,4 @@
-// app.js — Versão 8.1 (Correção Estatísticas e Filtros)
+// app.js — Versão 8.2 (Filtros Cascata Universal)
 
 "use strict";
 
@@ -14,7 +14,7 @@ if ('serviceWorker' in navigator) {
 
 window.onload = function() {
     setTimeout(() => {
-        showToast("✅ ATUALIZADO V8.1", "success");
+        showToast("✅ ATUALIZADO V8.2 (Filtros Dinâmicos)", "success");
     }, 500);
 }
 
@@ -40,7 +40,7 @@ const headerControls = document.querySelector('header .controls');
 
 // Filtros Questões
 const fDisciplina = document.getElementById('fDisciplina');
-const fAssunto = document.getElementById('fAssunto'); // Agora em cascata
+const fAssunto = document.getElementById('fAssunto'); 
 const fAno = document.getElementById('fAno');
 const fBanca = document.getElementById('fBanca');
 const fRevisao = document.getElementById('fRevisao'); 
@@ -215,16 +215,16 @@ function switchMode(mode) {
     if(formContainer) formContainer.style.display = 'none';
     if(formCardFC) formCardFC.style.display = 'none';
     
-    // Toggle Highlight dos Botões (CORRIGIDO)
+    // Toggle Highlight dos Botões
     if(mode === 'questoes') {
         sectionQuestoes.style.display = 'block';
         sectionFlashcards.style.display = 'none';
         
         btnModeQuestao.className = 'btn primary mode-active';
-        btnModeFlashcard.className = 'btn secondary'; // Remove estilo active
+        btnModeFlashcard.className = 'btn secondary'; 
         
         if(btnQuiz) btnQuiz.textContent = "Modo Treino";
-        if(dailyGoalPanel) dailyGoalPanel.style.display = 'block'; // Mostra meta
+        if(dailyGoalPanel) dailyGoalPanel.style.display = 'block'; 
         
         updateFilterOptions(); // Carrega filtros de Questão
         renderQuestions();
@@ -234,10 +234,10 @@ function switchMode(mode) {
         sectionFlashcards.style.display = 'block';
         
         btnModeQuestao.className = 'btn secondary';
-        btnModeFlashcard.className = 'btn primary mode-active'; // Adiciona estilo active
+        btnModeFlashcard.className = 'btn primary mode-active'; 
         
         if(btnQuiz) btnQuiz.textContent = "Estudar Flashcards";
-        if(dailyGoalPanel) dailyGoalPanel.style.display = 'none'; // Esconde meta
+        if(dailyGoalPanel) dailyGoalPanel.style.display = 'none'; 
         
         if(fcPlayer && fcPlayer.style.display === 'block') exitFlashcardStudy();
         
@@ -250,41 +250,105 @@ if(btnModeQuestao) btnModeQuestao.addEventListener('click', () => switchMode('qu
 if(btnModeFlashcard) btnModeFlashcard.addEventListener('click', () => switchMode('flashcards'));
 
 /* ---------------------------
-   FILTROS CASCATA
+   FILTROS CASCATA (Universal)
 ----------------------------*/
-// 1. Cascata para QUESTÕES
+// Configuração dos filtros de QUESTÕES que participarão da cascata
+const questionFiltersConfig = [
+    { el: fDisciplina, prop: 'disciplina', label: "Todas as disciplinas" },
+    { el: fAssunto, prop: 'assunto', label: "Todos os assuntos" },
+    { el: fBanca, prop: 'banca', label: "Todas as bancas" },
+    { el: fAno, prop: 'ano', label: "Todos os anos" },
+    { el: fDificuldade, prop: 'dificuldade', label: "Dificuldade" }
+];
+
 function updateFilterOptions() {
-  // Preenche Disciplinas (sempre)
-  const disciplinas = [...new Set(BD.map(q => q.disciplina).filter(a => a))].sort();
-  // Se já tiver valor, mantém
-  const currentDisc = fDisciplina.value;
-  renderSelectOptions(fDisciplina, "Todas as disciplinas", disciplinas, currentDisc);
-  
-  // Atualiza Assuntos baseado na Disciplina selecionada
-  updateAssuntoOptions(); 
-  
-  // Outros filtros estáticos
-  const bancas = [...new Set(BD.map(q => q.banca).filter(a => a))].sort();
-  const anos = [...new Set(BD.map(q => String(q.ano)).filter(a => a))].sort((a, b) => b - a);
-  renderSelectOptions(fBanca, "Todas as bancas", bancas, fBanca.value);
-  renderSelectOptions(fAno, "Todos os anos", anos, fAno.value);
+    // 1. Captura o estado atual de todos os selects + checkbox de revisão
+    const activeStates = {};
+    questionFiltersConfig.forEach(cfg => {
+        if(cfg.el) activeStates[cfg.prop] = cfg.el.value;
+    });
+    const isRevisao = fRevisao ? fRevisao.checked : false;
+
+    // 2. Para CADA filtro, recalcula suas opções disponíveis
+    questionFiltersConfig.forEach(target => {
+        if(!target.el) return;
+
+        // Conjunto para guardar opções únicas encontradas
+        const availableOptions = new Set();
+
+        // 3. Varre o Banco de Dados
+        BD.forEach(q => {
+            // A regra de Revisão é absoluta (se marcada, só mostra o que é revisão)
+            if(isRevisao && !q.revisao) return;
+
+            // Verifica se a questão passa por TODOS os filtros, EXCETO o filtro alvo (target)
+            // Exemplo: Para popular 'Banca', a questão deve bater com a Disciplina, Assunto e Ano selecionados.
+            let match = true;
+            for(const cfg of questionFiltersConfig) {
+                if(cfg.prop === target.prop) continue; // Ignora o próprio campo para não restringir a si mesmo
+                
+                const filterVal = activeStates[cfg.prop];
+                // Se filtro tem valor e a questão não bate
+                if(filterVal && String(q[cfg.prop] || '') !== filterVal) {
+                    match = false;
+                    break;
+                }
+            }
+
+            // Se a questão é válida no contexto dos outros filtros, adiciona a opção deste campo
+            if(match) {
+                const val = q[target.prop];
+                if(val) availableOptions.add(String(val));
+            }
+        });
+
+        // 4. Ordena e Renderiza
+        let optionsArray = [...availableOptions].sort();
+        if(target.prop === 'ano') optionsArray.sort((a, b) => b - a); // Ano descrescente
+
+        renderSelectOptions(target.el, target.label, optionsArray, activeStates[target.prop]);
+    });
 }
 
-function updateAssuntoOptions() {
-    const selectedDisc = fDisciplina.value;
-    let assuntos = [];
+function renderSelectOptions(selectEl, defaultText, optionsArray, currentValue) {
+  // Guarda o valor atual para tentar restaurar após re-render
+  const val = currentValue || selectEl.value;
+  selectEl.innerHTML = `<option value="">${defaultText}</option>` + 
+                       optionsArray.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+  
+  // Tenta restaurar a seleção anterior se ela ainda existir nas novas opções
+  if (val && optionsArray.includes(val)) {
+      selectEl.value = val;
+  } else {
+      selectEl.value = "";
+  }
+}
 
-    if(selectedDisc) {
-        // Apenas assuntos da disciplina selecionada
-        assuntos = [...new Set(BD.filter(q => q.disciplina === selectedDisc).map(q => q.assunto).filter(a => a))].sort();
-    } else {
-        // Todos os assuntos se nenhuma disciplina selecionada
-        assuntos = [...new Set(BD.map(q => q.assunto).filter(a => a))].sort();
+// 5. Anexa Listeners Unificados para Questões
+questionFiltersConfig.forEach(cfg => {
+    if(cfg.el) {
+        cfg.el.onchange = () => {
+            updateFilterOptions(); // Recalcula cascata
+            currentPage = 1;       // Reseta paginação
+            renderQuestions();     // Renderiza lista
+        };
     }
-    renderSelectOptions(fAssunto, "Todos os assuntos", assuntos, fAssunto.value);
+});
+
+// Listener específico para checkbox de Revisão (também dispara cascata)
+if(fRevisao) {
+    fRevisao.addEventListener('change', () => {
+        updateFilterOptions();
+        currentPage = 1;
+        renderQuestions();
+    });
 }
 
-// 2. Cascata para FLASHCARDS
+
+/* ---------------------------
+   Flashcards (Mantido Original)
+----------------------------*/
+// 2. Cascata para FLASHCARDS (Separado, conforme solicitado para não mexer)
 function updateFCFilters() {
     const disciplinas = [...new Set(BD_FC.map(f => f.disciplina).filter(d => d))].sort();
     const currentDisc = fcDisciplinaFilter.value;
@@ -305,25 +369,7 @@ function updateFCAssuntoOptions() {
     renderSelectOptions(fcAssuntoFilter, "Todos os assuntos", assuntos, fcAssuntoFilter.value);
 }
 
-
-function renderSelectOptions(selectEl, defaultText, optionsArray, currentValue) {
-  // Guarda o valor atual para tentar restaurar após re-render
-  const val = currentValue || selectEl.value;
-  selectEl.innerHTML = `<option value="">${defaultText}</option>` + 
-                       optionsArray.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-  if (val && optionsArray.includes(val)) {
-      selectEl.value = val;
-  } else {
-      selectEl.value = "";
-  }
-}
-
-// Event Listeners para Cascata
-if(fDisciplina) fDisciplina.addEventListener('change', () => { 
-    updateAssuntoOptions(); 
-    currentPage = 1; 
-    renderQuestions(); 
-});
+// Event Listeners para Cascata Flashcards
 if(fcDisciplinaFilter) fcDisciplinaFilter.addEventListener('change', () => {
     updateFCAssuntoOptions();
     renderFlashcardsList();
@@ -1288,11 +1334,7 @@ if(btnCloseStats) btnCloseStats.addEventListener('click', () => statsModal.close
 if(btnNovo) btnNovo.addEventListener('click', () => { currentMode === 'questoes' ? abrirFormulario() : openFCForm(); });
 if(btnQuiz) btnQuiz.addEventListener('click', () => { currentMode === 'questoes' ? initQuiz() : startFlashcardStudy(); });
 if(fSearch) fSearch.addEventListener('input', () => { currentPage = 1; renderQuestions(); });
-if(fAssunto) fAssunto.addEventListener('change', () => { currentPage = 1; renderQuestions(); });
-if(fAno) fAno.addEventListener('change', onFilterChange);
-if(fBanca) fBanca.addEventListener('change', onFilterChange);
-if(fRevisao) fRevisao.addEventListener('change', onFilterChange);
-if(fDificuldade) fDificuldade.addEventListener('change', onFilterChange); 
+// Os listeners de dropdown (change) agora são anexados dinamicamente na função 'updateFilterOptions'
 if(btnPrevPage) btnPrevPage.addEventListener('click', () => { if(currentPage>1){currentPage--; renderQuestions(); lista.scrollTop=0;} });
 if(btnNextPage) btnNextPage.addEventListener('click', () => { currentPage++; renderQuestions(); lista.scrollTop=0; });
 if(btnExport) btnExport.addEventListener('click', exportDB);
