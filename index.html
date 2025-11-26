@@ -301,6 +301,117 @@
               </div>
             </form>
           </div>
+<!-- CRONOGRAMA INTELIGENTE - VERSÃO MELHORADA -->
+<div class="card" id="cronogramaCard">
+  <div class="modal-header">
+    <h3>📅 Cronograma de Estudos</h3>
+    <button id="btnToggleCronograma" class="btn secondary">▼</button>
+  </div>
+  
+  <div id="cronogramaContent">
+    <!-- Setup do Cronograma -->
+    <div id="cronogramaSetup">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h4 style="margin: 0;">⚙️ Configurar Cronograma</h4>
+        <button id="btnLoadTemplate" class="btn secondary" style="font-size: 0.8rem;">📁 Modelos</button>
+      </div>
+      
+      <label>Data da Prova/Alvo
+        <input type="date" id="dataProva" min="">
+      </label>
+      
+      <div class="options">
+        <label style="margin-top:0;">Dias por Semana
+          <select id="diasSemana">
+            <option value="3">3 dias</option>
+            <option value="4">4 dias</option>
+            <option value="5" selected>5 dias</option>
+            <option value="6">6 dias</option>
+            <option value="7">7 dias</option>
+          </select>
+        </label>
+        
+        <label style="margin-top:0;">Horas por Dia
+          <select id="horasDia">
+            <option value="1">1 hora</option>
+            <option value="2" selected>2 horas</option>
+            <option value="3">3 horas</option>
+            <option value="4">4 horas</option>
+            <option value="5">5+ horas</option>
+          </select>
+        </label>
+      </div>
+
+      <label>Matérias do Cronograma</label>
+      <div id="listaMateriasCronograma" style="max-height: 200px; overflow-y: auto; margin: 10px 0; padding: 10px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+        <!-- Matérias serão adicionadas aqui -->
+      </div>
+      
+      <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <input type="text" id="novaMateria" placeholder="Nova matéria" style="flex: 1;">
+        <button onclick="adicionarMateriaCronograma()" class="btn secondary">+ Add</button>
+        <button onclick="importarMateriasBD()" class="btn secondary" title="Importar do Banco">📥 BD</button>
+      </div>
+
+      <div class="form-actions">
+        <button onclick="gerarCronograma()" class="btn primary">🎯 Gerar Cronograma</button>
+        <button onclick="salvarComoModelo()" class="btn secondary">💾 Salvar Modelo</button>
+        <button onclick="limparCronograma()" class="btn secondary">🗑️ Limpar</button>
+      </div>
+    </div>
+
+    <!-- Visualização do Cronograma Gerado -->
+    <div id="cronogramaView" style="display: none; margin-top: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h4 style="margin: 0;">📋 Seu Cronograma</h4>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="editarCronograma()" class="btn secondary" style="font-size: 0.8rem;">✏️ Editar</button>
+          <button onclick="refazerCronograma()" class="btn secondary" style="font-size: 0.8rem;">🔄 Refazer</button>
+          <button onclick="exportarCronograma()" class="btn secondary" style="font-size: 0.8rem;">📤 Exportar</button>
+          <button onclick="excluirCronograma()" class="btn secondary" style="font-size: 0.8rem; background: var(--danger);">🗑️ Excluir</button>
+        </div>
+      </div>
+      
+      <div id="resumoCronograma" class="meta" style="margin-bottom: 15px; padding: 10px; background: var(--bg); border-radius: 8px;"></div>
+      
+      <!-- Controles de Navegação -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <div id="tabsSemanas" style="flex: 1;">
+          <!-- Tabs de semanas serão geradas aqui -->
+        </div>
+        <div style="display: flex; gap: 5px;">
+          <button id="btnSemanaAnterior" class="btn secondary" style="padding: 6px 10px;">◀</button>
+          <button id="btnSemanaProxima" class="btn secondary" style="padding: 6px 10px;">▶</button>
+        </div>
+      </div>
+      
+      <div id="conteudoCronograma" style="max-height: 400px; overflow-y: auto;">
+        <!-- Conteúdo das semanas será gerado aqui -->
+      </div>
+
+      <!-- Ações Rápidas -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+        <button onclick="marcarSemanaComoConcluida()" class="btn secondary" style="font-size: 0.8rem;">✅ Marcar Semana</button>
+        <button onclick="recalcularCronograma()" class="btn secondary" style="font-size: 0.8rem;">📊 Recalcular</button>
+      </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <dialog id="modalEditarCronograma" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>✏️ Editar Cronograma</h3>
+          <button onclick="fecharModalEdicao()" class="btn secondary">×</button>
+        </div>
+        <div class="modal-body">
+          <div id="conteudoEdicaoCronograma">
+            <!-- Conteúdo dinâmico de edição -->
+          </div>
+        </div>
+      </div>
+    </dialog>
+  </div>
+</div>
 
         <div class="card info">
           <h4>Dicas</h4>

@@ -1374,12 +1374,736 @@ function migrateOldQuestions() {
 }
 function onFilterChange() { currentPage = 1; renderQuestions(); }
 
+/* ================================
+   SISTEMA DE CRONOGRAMA INTELIGENTE
+   ================================ */
+
+let CRONOGRAMA_DATA = JSON.parse(localStorage.getItem('BD_CRONOGRAMA') || 'null');
+let MATERIAS_CRONOGRAMA = JSON.parse(localStorage.getItem('BD_MATERIAS') || '[]');
+
+// Inicialização do cronograma
+function initCronograma() {
+    // Configura data mínima como hoje
+    const hoje = new Date().toISOString().split('T')[0];
+    const dataProvaInput = document.getElementById('dataProva');
+    if (dataProvaInput) {
+        dataProvaInput.min = hoje;
+    }
+    
+    // Carrega matérias salvas
+    renderizarMateriasCronograma();
+    
+    // Carrega cronograma existente
+    if (CRONOGRAMA_DATA) {
+        carregarCronogramaExistente();
+    }
+    
+    // Toggle do cronograma
+    const btnToggle = document.getElementById('btnToggleCronograma');
+    if (btnToggle) {
+        btnToggle.addEventListener('click', toggleCronograma);
+    }
+}
+
+function toggleCronograma() {
+    const content = document.getElementById('cronogramaContent');
+    const btn = document.getElementById('btnToggleCronograma');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        btn.textContent = '▼';
+    } else {
+        content.style.display = 'none';
+        btn.textContent = '▶';
+    }
+}
+
+function adicionarMateriaCronograma() {
+    const input = document.getElementById('novaMateria');
+    const materia = input.value.trim();
+    
+    if (!materia) {
+        showToast('Digite o nome da matéria!', 'error');
+        return;
+    }
+    
+    if (MATERIAS_CRONOGRAMA.includes(materia)) {
+        showToast('Matéria já adicionada!', 'error');
+        return;
+    }
+    
+    MATERIAS_CRONOGRAMA.push(materia);
+    localStorage.setItem('BD_MATERIAS', JSON.stringify(MATERIAS_CRONOGRAMA));
+    renderizarMateriasCronograma();
+    
+    input.value = '';
+    showToast(`Matéria "${materia}" adicionada!`, 'success');
+}
+
+function renderizarMateriasCronograma() {
+    const container = document.getElementById('listaMateriasCronograma');
+    if (!container) return;
+    
+    if (MATERIAS_CRONOGRAMA.length === 0) {
+        container.innerHTML = '<p class="meta" style="text-align: center; margin: 0;">Nenhuma matéria adicionada</p>';
+        return;
+    }
+    
+    container.innerHTML = MATERIAS_CRONOGRAMA.map((materia, index) => `
+        <div class="materia-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin: 5px 0; background: var(--card); border-radius: 6px; border: 1px solid var(--border);">
+            <span>📚 ${escapeHtml(materia)}</span>
+            <button onclick="removerMateria(${index})" class="btn-icon" style="color: var(--danger);">×</button>
+        </div>
+    `).join('');
+}
+
+function removerMateria(index) {
+    MATERIAS_CRONOGRAMA.splice(index, 1);
+    localStorage.setItem('BD_MATERIAS', JSON.stringify(MATERIAS_CRONOGRAMA));
+    renderizarMateriasCronograma();
+}
+
+function gerarCronograma() {
+    const dataProva = document.getElementById('dataProva').value;
+    const diasSemana = parseInt(document.getElementById('diasSemana').value);
+    const horasDia = parseInt(document.getElementById('horasDia').value);
+    
+    if (!dataProva) {
+        showToast('Selecione a data da prova!', 'error');
+        return;
+    }
+    
+    if (MATERIAS_CRONOGRAMA.length === 0) {
+        showToast('Adicione pelo menos uma matéria!', 'error');
+        return;
+    }
+    
+    // Calcula dias até a prova
+    const hoje = new Date();
+    const provaDate = new Date(dataProva);
+    const diffTime = provaDate - hoje;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 0) {
+        showToast('Data da prova deve ser futura!', 'error');
+        return;
+    }
+    
+    // Calcula totais
+    const totalDiasEstudo = Math.floor((diffDays - 7) * (diasSemana / 7)); // Subtrai 1 semana para revisão
+    const totalHoras = totalDiasEstudo * horasDia;
+    const horasPorMateria = Math.floor(totalHoras / MATERIAS_CRONOGRAMA.length);
+    
+    // Gera estrutura do cronograma
+    const cronograma = {
+        dataGeracao: new Date().toISOString(),
+        dataProva: dataProva,
+        diasSemana: diasSemana,
+        horasDia: horasDia,
+        totalDias: diffDays,
+        totalDiasEstudo: totalDiasEstudo,
+        totalHoras: totalHoras,
+        semanas: [],
+        materias: MATERIAS_CRONOGRAMA.map(materia => ({
+            nome: materia,
+            horasAlocadas: horasPorMateria,
+            horasEstudadas: 0,
+            concluida: false
+        }))
+    };
+    
+    // Distribui as matérias pelas semanas
+    distribuirMateriasPorSemana(cronograma);
+    
+    // Salva e exibe
+    CRONOGRAMA_DATA = cronograma;
+    localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(cronograma));
+    
+    exibirCronograma(cronograma);
+    showToast('Cronograma gerado com sucesso! 🎯', 'success');
+}
+
+function distribuirMateriasPorSemana(cronograma) {
+    const { totalDiasEstudo, diasSemana, materias } = cronograma;
+    const totalSemanas = Math.ceil(totalDiasEstudo / diasSemana);
+    
+    cronograma.semanas = [];
+    
+    for (let semana = 1; semana <= totalSemanas; semana++) {
+        const semanaData = {
+            numero: semana,
+            dias: []
+        };
+        
+        // Distribui matérias igualmente (round-robin)
+        for (let dia = 1; dia <= diasSemana; dia++) {
+            const materiaIndex = (dia + semana) % materias.length;
+            const materia = materias[materiaIndex];
+            
+            semanaData.dias.push({
+                dia: dia,
+                materia: materia.nome,
+                concluido: false,
+                horasEstudadas: 0
+            });
+        }
+        
+        cronograma.semanas.push(semanaData);
+    }
+    
+    // Última semana é revisão geral
+    if (totalSemanas > 1) {
+        const revisaoSemana = {
+            numero: totalSemanas,
+            dias: [],
+            isRevisao: true
+        };
+        
+        for (let dia = 1; dia <= diasSemana; dia++) {
+            revisaoSemana.dias.push({
+                dia: dia,
+                materia: "REVISÃO GERAL",
+                concluido: false,
+                horasEstudadas: 0,
+                isRevisao: true
+            });
+        }
+        
+        cronograma.semanas[cronograma.semanas.length - 1] = revisaoSemana;
+    }
+}
+
+function exibirCronograma(cronograma) {
+    const setup = document.getElementById('cronogramaSetup');
+    const view = document.getElementById('cronogramaView');
+    const resumo = document.getElementById('resumoCronograma');
+    const tabs = document.getElementById('tabsSemanas');
+    const conteudo = document.getElementById('conteudoCronograma');
+    
+    if (!setup || !view || !resumo || !tabs || !conteudo) return;
+    
+    // Mostra a view e esconde o setup
+    setup.style.display = 'none';
+    view.style.display = 'block';
+    
+    // Atualiza resumo
+    const progresso = calcularProgressoCronograma(cronograma);
+    resumo.innerHTML = `
+        <strong>🎯 Meta:</strong> ${cronograma.dataProva} 
+        | <strong>📅 Dias:</strong> ${cronograma.totalDiasEstudo} dias de estudo 
+        | <strong>⏱️ Total:</strong> ${cronograma.totalHoras}h
+        | <strong>📊 Progresso:</strong> ${progresso}%
+    `;
+    
+    // Gera tabs das semanas
+    tabs.innerHTML = cronograma.semanas.map(semana => `
+        <button class="btn secondary tab-semana ${semana.numero === 1 ? 'active' : ''}" 
+                onclick="mostrarSemana(${semana.numero})">
+            Semana ${semana.numero}
+        </button>
+    `).join('');
+    
+    // Gera conteúdo das semanas
+    conteudo.innerHTML = cronograma.semanas.map(semana => `
+        <div id="semana-${semana.numero}" class="semana-conteudo" style="display: ${semana.numero === 1 ? 'block' : 'none'};">
+            <h5 style="margin: 15px 0 10px 0; color: var(--accent);">
+                ${semana.isRevisao ? '🔄 REVISÃO GERAL' : '📚 Estudos'} - Semana ${semana.numero}
+            </h5>
+            <div class="dias-semana">
+                ${semana.dias.map(dia => `
+                    <div class="dia-cronograma ${dia.concluido ? 'concluido' : ''}" 
+                         onclick="marcarDiaConcluido(${semana.numero}, ${dia.dia})">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span><strong>Dia ${dia.dia}:</strong> ${escapeHtml(dia.materia)}</span>
+                            <span class="status-dia">${dia.concluido ? '✅' : '⏳'}</span>
+                        </div>
+                        <div class="meta" style="margin-top: 5px;">
+                            Horas estudadas: 
+                            <input type="number" min="0" max="8" value="${dia.horasEstudadas}" 
+                                   onchange="atualizarHorasDia(${semana.numero}, ${dia.dia}, this.value)"
+                                   style="width: 50px; padding: 2px; margin: 0 5px;">
+                            h
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function calcularProgressoCronograma(cronograma) {
+    if (!cronograma.semanas.length) return 0;
+    
+    let totalDias = 0;
+    let diasConcluidos = 0;
+    
+    cronograma.semanas.forEach(semana => {
+        semana.dias.forEach(dia => {
+            totalDias++;
+            if (dia.concluido) diasConcluidos++;
+        });
+    });
+    
+    return Math.round((diasConcluidos / totalDias) * 100);
+}
+
+function mostrarSemana(numeroSemana) {
+    // Esconde todas as semanas
+    document.querySelectorAll('.semana-conteudo').forEach(semana => {
+        semana.style.display = 'none';
+    });
+    
+    // Remove active de todas as tabs
+    document.querySelectorAll('.tab-semana').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Mostra semana selecionada
+    const semanaEl = document.getElementById(`semana-${numeroSemana}`);
+    if (semanaEl) {
+        semanaEl.style.display = 'block';
+    }
+    
+    // Ativa tab selecionada
+    const tabEl = document.querySelector(`.tab-semana:nth-child(${numeroSemana})`);
+    if (tabEl) {
+        tabEl.classList.add('active');
+    }
+}
+
+function marcarDiaConcluido(numeroSemana, numeroDia) {
+    if (!CRONOGRAMA_DATA) return;
+    
+    const semana = CRONOGRAMA_DATA.semanas.find(s => s.numero === numeroSemana);
+    if (!semana) return;
+    
+    const dia = semana.dias.find(d => d.dia === numeroDia);
+    if (!dia) return;
+    
+    dia.concluido = !dia.concluido;
+    localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(CRONOGRAMA_DATA));
+    
+    // Atualiza a exibição
+    exibirCronograma(CRONOGRAMA_DATA);
+    showToast(dia.concluido ? 'Dia marcado como concluído! ✅' : 'Dia reaberto para estudo', 'success');
+}
+
+function atualizarHorasDia(numeroSemana, numeroDia, horas) {
+    if (!CRONOGRAMA_DATA) return;
+    
+    const semana = CRONOGRAMA_DATA.semanas.find(s => s.numero === numeroSemana);
+    if (!semana) return;
+    
+    const dia = semana.dias.find(d => d.dia === numeroDia);
+    if (!dia) return;
+    
+    dia.horasEstudadas = parseInt(horas) || 0;
+    localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(CRONOGRAMA_DATA));
+}
+
+function carregarCronogramaExistente() {
+    if (!CRONOGRAMA_DATA) return;
+    exibirCronograma(CRONOGRAMA_DATA);
+}
+
+function limparCronograma() {
+    if (!confirm('Tem certeza que deseja limpar todo o cronograma?')) return;
+    
+    CRONOGRAMA_DATA = null;
+    localStorage.removeItem('BD_CRONOGRAMA');
+    
+    document.getElementById('cronogramaSetup').style.display = 'block';
+    document.getElementById('cronogramaView').style.display = 'none';
+    document.getElementById('dataProva').value = '';
+    
+    showToast('Cronograma limpo!', 'info');
+}
+
+function exportarCronograma() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    let texto = `CRONOGRAMA DE ESTUDOS\n`;
+    texto += `Data da prova: ${CRONOGRAMA_DATA.dataProva}\n`;
+    texto += `Dias por semana: ${CRONOGRAMA_DATA.diasSemana}\n`;
+    texto += `Horas por dia: ${CRONOGRAMA_DATA.horasDia}\n`;
+    texto += `Total de horas: ${CRONOGRAMA_DATA.totalHoras}h\n\n`;
+    
+    CRONOGRAMA_DATA.semanas.forEach(semana => {
+        texto += `SEMANA ${semana.numero}:\n`;
+        semana.dias.forEach(dia => {
+            texto += `Dia ${dia.dia}: ${dia.materia} - ${dia.concluido ? '✅' : '⏳'} - ${dia.horasEstudadas}h\n`;
+        });
+        texto += '\n';
+    });
+    
+    const blob = new Blob([texto], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `cronograma_estudos_${CRONOGRAMA_DATA.dataProva}.txt`;
+    link.click();
+}
+
+/* ================================
+   SISTEMA DE GERENCIAMENTO DO CRONOGRAMA
+   ================================ */
+
+let MODELOS_CRONOGRAMA = JSON.parse(localStorage.getItem('BD_MODELOS_CRONOGRAMA') || '[]');
+let semanaAtual = 1;
+
+// Funções de Navegação
+function initNavegacaoCronograma() {
+    const btnAnterior = document.getElementById('btnSemanaAnterior');
+    const btnProxima = document.getElementById('btnSemanaProxima');
+    
+    if (btnAnterior) {
+        btnAnterior.addEventListener('click', () => navegarSemanas(-1));
+    }
+    if (btnProxima) {
+        btnProxima.addEventListener('click', () => navegarSemanas(1));
+    }
+}
+
+function navegarSemanas(direcao) {
+    if (!CRONOGRAMA_DATA) return;
+    
+    const novaSemana = semanaAtual + direcao;
+    const totalSemanas = CRONOGRAMA_DATA.semanas.length;
+    
+    if (novaSemana >= 1 && novaSemana <= totalSemanas) {
+        semanaAtual = novaSemana;
+        mostrarSemana(semanaAtual);
+        atualizarBotoesNavegacao();
+    }
+}
+
+function atualizarBotoesNavegacao() {
+    const btnAnterior = document.getElementById('btnSemanaAnterior');
+    const btnProxima = document.getElementById('btnSemanaProxima');
+    const totalSemanas = CRONOGRAMA_DATA ? CRONOGRAMA_DATA.semanas.length : 0;
+    
+    if (btnAnterior) btnAnterior.disabled = semanaAtual === 1;
+    if (btnProxima) btnProxima.disabled = semanaAtual === totalSemanas;
+}
+
+// Edição do Cronograma
+function editarCronograma() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    const modal = document.getElementById('modalEditarCronograma');
+    const conteudo = document.getElementById('conteudoEdicaoCronograma');
+    
+    if (!modal || !conteudo) return;
+    
+    conteudo.innerHTML = `
+        <div style="margin-bottom: 15px;">
+            <label>Data da Prova
+                <input type="date" id="editDataProva" value="${CRONOGRAMA_DATA.dataProva}">
+            </label>
+        </div>
+        
+        <div class="options">
+            <label style="margin-top:0;">Dias por Semana
+                <select id="editDiasSemana">
+                    <option value="3" ${CRONOGRAMA_DATA.diasSemana === 3 ? 'selected' : ''}>3 dias</option>
+                    <option value="4" ${CRONOGRAMA_DATA.diasSemana === 4 ? 'selected' : ''}>4 dias</option>
+                    <option value="5" ${CRONOGRAMA_DATA.diasSemana === 5 ? 'selected' : ''}>5 dias</option>
+                    <option value="6" ${CRONOGRAMA_DATA.diasSemana === 6 ? 'selected' : ''}>6 dias</option>
+                    <option value="7" ${CRONOGRAMA_DATA.diasSemana === 7 ? 'selected' : ''}>7 dias</option>
+                </select>
+            </label>
+            
+            <label style="margin-top:0;">Horas por Dia
+                <select id="editHorasDia">
+                    <option value="1" ${CRONOGRAMA_DATA.horasDia === 1 ? 'selected' : ''}>1 hora</option>
+                    <option value="2" ${CRONOGRAMA_DATA.horasDia === 2 ? 'selected' : ''}>2 horas</option>
+                    <option value="3" ${CRONOGRAMA_DATA.horasDia === 3 ? 'selected' : ''}>3 horas</option>
+                    <option value="4" ${CRONOGRAMA_DATA.horasDia === 4 ? 'selected' : ''}>4 horas</option>
+                    <option value="5" ${CRONOGRAMA_DATA.horasDia === 5 ? 'selected' : ''}>5+ horas</option>
+                </select>
+            </label>
+        </div>
+        
+        <label>Editar Matérias</label>
+        <div id="listaMateriasEdicao" style="max-height: 150px; overflow-y: auto; margin: 10px 0; padding: 10px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+            ${CRONOGRAMA_DATA.materias.map((materia, index) => `
+                <div class="materia-item-edicao" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin: 5px 0; background: var(--card); border-radius: 6px;">
+                    <input type="text" value="${escapeHtml(materia.nome)}" onchange="atualizarNomeMateria(${index}, this.value)" style="background: none; border: none; color: var(--text-primary); flex: 1;">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" value="${materia.horasAlocadas}" min="1" max="50" 
+                               onchange="atualizarHorasMateria(${index}, this.value)" 
+                               style="width: 60px; padding: 2px; text-align: center;">
+                        <span>h</span>
+                        <button onclick="removerMateriaEdicao(${index})" class="btn-icon" style="color: var(--danger);">×</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        
+        <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+            <input type="text" id="novaMateriaEdicao" placeholder="Nova matéria" style="flex: 1;">
+            <button onclick="adicionarMateriaEdicao()" class="btn secondary">+ Add</button>
+        </div>
+        
+        <div class="form-actions">
+            <button onclick="salvarEdicaoCronograma()" class="btn primary">💾 Salvar Alterações</button>
+            <button onclick="fecharModalEdicao()" class="btn secondary">Cancelar</button>
+        </div>
+    `;
+    
+    modal.showModal();
+}
+
+function fecharModalEdicao() {
+    const modal = document.getElementById('modalEditarCronograma');
+    if (modal) modal.close();
+}
+
+function atualizarNomeMateria(index, novoNome) {
+    if (!CRONOGRAMA_DATA || !novoNome.trim()) return;
+    CRONOGRAMA_DATA.materias[index].nome = novoNome.trim();
+}
+
+function atualizarHorasMateria(index, horas) {
+    if (!CRONOGRAMA_DATA) return;
+    CRONOGRAMA_DATA.materias[index].horasAlocadas = parseInt(horas) || 1;
+}
+
+function removerMateriaEdicao(index) {
+    if (!CRONOGRAMA_DATA) return;
+    
+    if (CRONOGRAMA_DATA.materias.length <= 1) {
+        showToast('É necessário ter pelo menos uma matéria!', 'error');
+        return;
+    }
+    
+    CRONOGRAMA_DATA.materias.splice(index, 1);
+    
+    // Atualiza a lista de edição
+    const lista = document.getElementById('listaMateriasEdicao');
+    if (lista) {
+        lista.innerHTML = CRONOGRAMA_DATA.materias.map((materia, idx) => `
+            <div class="materia-item-edicao" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin: 5px 0; background: var(--card); border-radius: 6px;">
+                <input type="text" value="${escapeHtml(materia.nome)}" onchange="atualizarNomeMateria(${idx}, this.value)" style="background: none; border: none; color: var(--text-primary); flex: 1;">
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" value="${materia.horasAlocadas}" min="1" max="50" 
+                           onchange="atualizarHorasMateria(${idx}, this.value)" 
+                           style="width: 60px; padding: 2px; text-align: center;">
+                    <span>h</span>
+                    <button onclick="removerMateriaEdicao(${idx})" class="btn-icon" style="color: var(--danger);">×</button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function adicionarMateriaEdicao() {
+    const input = document.getElementById('novaMateriaEdicao');
+    const nome = input.value.trim();
+    
+    if (!nome) {
+        showToast('Digite o nome da matéria!', 'error');
+        return;
+    }
+    
+    if (!CRONOGRAMA_DATA) return;
+    
+    CRONOGRAMA_DATA.materias.push({
+        nome: nome,
+        horasAlocadas: 2,
+        horasEstudadas: 0,
+        concluida: false
+    });
+    
+    // Atualiza a lista
+    removerMateriaEdicao(CRONOGRAMA_DATA.materias.length - 1); // Força atualização
+    input.value = '';
+}
+
+function salvarEdicaoCronograma() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    // Atualiza dados básicos
+    CRONOGRAMA_DATA.dataProva = document.getElementById('editDataProva').value;
+    CRONOGRAMA_DATA.diasSemana = parseInt(document.getElementById('editDiasSemana').value);
+    CRONOGRAMA_DATA.horasDia = parseInt(document.getElementById('editHorasDia').value);
+    
+    // Recalcula o cronograma com as novas configurações
+    recalcularCronogramaCompleto();
+    
+    fecharModalEdicao();
+    showToast('Cronograma atualizado com sucesso!', 'success');
+}
+
+// Refazer Cronograma
+function refazerCronograma() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    if (!confirm('Deseja refazer o cronograma mantendo as matérias atuais?')) return;
+    
+    // Volta para o setup com as matérias atuais
+    MATERIAS_CRONOGRAMA = CRONOGRAMA_DATA.materias.map(m => m.nome);
+    localStorage.setItem('BD_MATERIAS', JSON.stringify(MATERIAS_CRONOGRAMA));
+    
+    document.getElementById('cronogramaSetup').style.display = 'block';
+    document.getElementById('cronogramaView').style.display = 'none';
+    
+    // Preenche os campos com os valores atuais
+    document.getElementById('dataProva').value = CRONOGRAMA_DATA.dataProva;
+    document.getElementById('diasSemana').value = CRONOGRAMA_DATA.diasSemana;
+    document.getElementById('horasDia').value = CRONOGRAMA_DATA.horasDia;
+    
+    renderizarMateriasCronograma();
+    showToast('Configure o novo cronograma!', 'info');
+}
+
+// Excluir Cronograma
+function excluirCronograma() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    if (!confirm('Tem certeza que deseja EXCLUIR permanentemente este cronograma?\n\nIsso removerá todo o progresso salvo.')) return;
+    
+    CRONOGRAMA_DATA = null;
+    localStorage.removeItem('BD_CRONOGRAMA');
+    
+    document.getElementById('cronogramaSetup').style.display = 'block';
+    document.getElementById('cronogramaView').style.display = 'none';
+    
+    showToast('Cronograma excluído com sucesso!', 'info');
+}
+
+// Recalcular Cronograma
+function recalcularCronograma() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    if (!confirm('Recalcular o cronograma com base no progresso atual?')) return;
+    
+    recalcularCronogramaCompleto();
+    showToast('Cronograma recalculado!', 'success');
+}
+
+function recalcularCronogramaCompleto() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    const { dataProva, diasSemana, horasDia, materias } = CRONOGRAMA_DATA;
+    
+    // Recalcula totais (similar à função gerarCronograma)
+    const hoje = new Date();
+    const provaDate = new Date(dataProva);
+    const diffTime = provaDate - hoje;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const totalDiasEstudo = Math.floor((diffDays - 7) * (diasSemana / 7));
+    const totalHoras = totalDiasEstudo * horasDia;
+    
+    // Atualiza dados do cronograma
+    CRONOGRAMA_DATA.totalDias = diffDays;
+    CRONOGRAMA_DATA.totalDiasEstudo = totalDiasEstudo;
+    CRONOGRAMA_DATA.totalHoras = totalHoras;
+    
+    // Redistribui matérias
+    distribuirMateriasPorSemana(CRONOGRAMA_DATA);
+    
+    // Mantém o progresso existente onde possível
+    preservarProgressoExistente();
+    
+    localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(CRONOGRAMA_DATA));
+    exibirCronograma(CRONOGRAMA_DATA);
+}
+
+function preservarProgressoExistente() {
+    // Esta função preservaria o progresso ao recalcular
+    // Implementação simplificada por enquanto
+}
+
+// Marcar Semana como Concluída
+function marcarSemanaComoConcluida() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    const semana = CRONOGRAMA_DATA.semanas.find(s => s.numero === semanaAtual);
+    if (!semana) return;
+    
+    const todosConcluidos = semana.dias.every(dia => dia.concluido);
+    
+    semana.dias.forEach(dia => {
+        dia.concluido = !todosConcluidos;
+    });
+    
+    localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(CRONOGRAMA_DATA));
+    exibirCronograma(CRONOGRAMA_DATA);
+    
+    showToast(todosConcluidos ? 'Semana reaberta!' : 'Semana marcada como concluída! ✅', 'success');
+}
+
+// Importar Matérias do Banco de Dados
+function importarMateriasBD() {
+    const disciplinas = [...new Set(BD.map(q => q.disciplina).filter(d => d))].sort();
+    
+    if (disciplinas.length === 0) {
+        showToast('Nenhuma disciplina encontrada no banco!', 'error');
+        return;
+    }
+    
+    let added = 0;
+    disciplinas.forEach(disciplina => {
+        if (!MATERIAS_CRONOGRAMA.includes(disciplina)) {
+            MATERIAS_CRONOGRAMA.push(disciplina);
+            added++;
+        }
+    });
+    
+    localStorage.setItem('BD_MATERIAS', JSON.stringify(MATERIAS_CRONOGRAMA));
+    renderizarMateriasCronograma();
+    
+    showToast(`${added} matérias importadas do banco!`, 'success');
+}
+
+// Sistema de Modelos
+function salvarComoModelo() {
+    if (!CRONOGRAMA_DATA) return;
+    
+    const nomeModelo = prompt('Nome para este modelo:');
+    if (!nomeModelo) return;
+    
+    const modelo = {
+        nome: nomeModelo,
+        data: new Date().toISOString(),
+        config: {
+            diasSemana: CRONOGRAMA_DATA.diasSemana,
+            horasDia: CRONOGRAMA_DATA.horasDia,
+            materias: CRONOGRAMA_DATA.materias.map(m => m.nome)
+        }
+    };
+    
+    MODELOS_CRONOGRAMA.push(modelo);
+    localStorage.setItem('BD_MODELOS_CRONOGRAMA', JSON.stringify(MODELOS_CRONOGRAMA));
+    
+    showToast(`Modelo "${nomeModelo}" salvo!`, 'success');
+}
+
+function carregarModelo() {
+    // Implementação para carregar modelos salvos
+    // (pode ser expandida conforme necessidade)
+}
+
+// Atualize a função initCronograma para incluir a navegação
+function initCronograma() {
+    // ... código anterior ...
+    
+    // Inicializa navegação
+    initNavegacaoCronograma();
+    
+    // Carrega modelos
+    if (MODELOS_CRONOGRAMA.length > 0) {
+        // Pode adicionar interface para modelos se desejar
+    }
+}
+
 function init(){
   loadTheme(); 
   initDailyGoal(); 
   populateSavedFilters();
   migrateOldQuestions(); 
   updateFilterOptions();
+  initCronograma();
   switchMode('questoes');
 }
 init();
