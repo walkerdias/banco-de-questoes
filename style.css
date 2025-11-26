@@ -45,122 +45,77 @@ body {
 }
 
 /* ================================
-   ESTILOS DO CRONOGRAMA - MELHORADOS
+   ESTILOS DO CRONOGRAMA - BOTÕES CORRIGIDOS
    ================================ */
 
-.dias-semana {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+/* Botões do cronograma - layout responsivo */
+#cronogramaView .btn {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
-.dia-cronograma {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
+/* Destaque para o botão excluir */
+.btn-danger {
+  background: var(--danger) !important;
+  color: white !important;
+  border: 1px solid var(--danger) !important;
+  font-weight: 600;
 }
 
-.dia-cronograma:hover {
-    background: var(--border);
-    transform: translateY(-1px);
+/* Tabs de semanas responsivas */
+#tabsSemanas {
+  gap: 3px !important;
 }
 
-.dia-cronograma.concluido {
-    background: rgba(40, 167, 69, 0.1);
-    border-color: var(--success);
+#tabsSemanas .tab-semana {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  margin: 0;
+  flex: 1;
+  min-width: 60px;
+  text-align: center;
 }
 
-.tab-semana {
-    margin-right: 5px;
-    margin-bottom: 5px;
-    font-size: 0.8rem;
-    padding: 6px 10px;
+/* Ajustes para telas muito pequenas */
+@media (max-width: 480px) {
+  #cronogramaView .btn {
+    font-size: 0.75rem !important;
+    min-width: 70px !important;
+    padding: 8px 6px !important;
+  }
+  
+  #tabsSemanas .tab-semana {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
 }
 
-.tab-semana.active {
-    background: var(--accent);
-    color: white;
+/* Melhor espaçamento geral */
+#cronogramaView {
+  gap: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
-.semana-conteudo {
-    animation: fadeIn 0.3s ease;
+/* Garantir que o resumo seja legível */
+#resumoCronograma {
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
-.status-dia {
-    font-size: 1.2rem;
+/* Highlight para botões perigosos */
+.btn-danger {
+  background: var(--danger) !important;
+  color: white !important;
+  border-color: var(--danger) !important;
 }
 
-.materia-item {
-    transition: all 0.2s;
-}
-
-.materia-item:hover {
-    background: var(--border) !important;
-}
-
-.materia-item-edicao {
-    transition: all 0.2s;
-    border: 1px solid transparent;
-}
-
-.materia-item-edicao:hover {
-    border-color: var(--accent);
-}
-
-.materia-item-edicao input[type="text"] {
-    background: transparent;
-    border: none;
-    outline: none;
-    font-size: 0.9rem;
-}
-
-.materia-item-edicao input[type="text"]:focus {
-    border-bottom: 1px solid var(--accent);
-}
-
-/* Navegação entre semanas */
-#btnSemanaAnterior:disabled,
-#btnSemanaProxima:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Grid de ações rápidas */
-@media (max-width: 768px) {
-    .options {
-        grid-template-columns: 1fr;
-    }
-    
-    .dias-semana {
-        gap: 8px;
-    }
-    
-    .dia-cronograma {
-        padding: 10px;
-    }
-    
-    /* Ajustes para mobile */
-    #cronogramaView .form-actions {
-        flex-direction: column;
-    }
-    
-    #cronogramaView .form-actions button {
-        width: 100%;
-        margin-bottom: 5px;
-    }
-}
-
-/* Animações suaves */
-@keyframes slideIn {
-    from { opacity: 0; transform: translateX(-10px); }
-    to { opacity: 1; transform: translateX(0); }
-}
-
-.semana-conteudo {
-    animation: slideIn 0.3s ease;
+.btn-danger:hover {
+  background: #c82333 !important;
+  transform: translateY(-1px);
 }
 
 /* Header Ajustado */

@@ -12,10 +12,67 @@ if ('serviceWorker' in navigator) {
 }
 // -----------------------
 
+/* ---------------------------
+   Estado e Dados
+----------------------------*/
+let BD = JSON.parse(localStorage.getItem('BD_QUESTOES') || '[]');
+let BD_FC = JSON.parse(localStorage.getItem('BD_FLASHCARDS') || '[]');
+let SAVED_FILTERS = JSON.parse(localStorage.getItem('BD_FILTROS') || '{}');
+let DAILY_GOAL = JSON.parse(localStorage.getItem('BD_DAILY_GOAL') || '{"date": "", "count": 0, "target": 20}');
+let currentMode = 'questoes';
+let CRONOGRAMA_DATA = JSON.parse(localStorage.getItem('BD_CRONOGRAMA') || 'null');
+let MATERIAS_CRONOGRAMA = JSON.parse(localStorage.getItem('BD_MATERIAS') || '[]');
+let MODELOS_CRONOGRAMA = JSON.parse(localStorage.getItem('BD_MODELOS_CRONOGRAMA') || '[]'); 
+
+// Quiz / Treino State
+let inQuiz = false;
+let quizIndex = 0;
+let quizOrder = [];
+let timerInterval = null;
+let startTime = 0;
+
+// Flashcard Player State
+let fcIndex = 0;
+let fcList = [];
+
+let currentPage = 1;
+const ITEMS_PER_PAGE = 20;
+let questionsSinceBackup = 0;
+
+// DEBUG - Verificar o que está acontecendo
+console.log('=== DEBUG CRONOGRAMA ===');
+console.log('BD_CRONOGRAMA no localStorage:', localStorage.getItem('BD_CRONOGRAMA'));
+console.log('CRONOGRAMA_DATA na memória:', CRONOGRAMA_DATA);
+console.log('=== FIM DEBUG ===');
+
 window.onload = function() {
     setTimeout(() => {
         showToast("✅ ATUALIZADO V8.2 (Filtros Dinâmicos)", "success");
     }, 500);
+}
+
+window.debugCronograma = function() {
+    console.log('=== DEBUG CRONOGRAMA ===');
+    console.log('CRONOGRAMA_DATA:', CRONOGRAMA_DATA);
+    
+    const salvo = localStorage.getItem('BD_CRONOGRAMA');
+    console.log('localStorage BD_CRONOGRAMA:', salvo);
+    
+    if (salvo) {
+        try {
+            const parsed = JSON.parse(salvo);
+            console.log('✅ Parse bem-sucedido');
+            CRONOGRAMA_DATA = parsed;
+            exibirCronograma(CRONOGRAMA_DATA);
+        } catch (e) {
+            console.error('❌ Erro no parse:', e);
+        }
+    }
+    
+    // Verifica elementos DOM
+    const setup = document.getElementById('cronogramaSetup');
+    const view = document.getElementById('cronogramaView');
+    console.log('Elementos DOM - Setup:', setup, 'View:', view);
 }
 
 /* ---------------------------
@@ -103,31 +160,6 @@ const btnLimpar = document.getElementById('btnLimpar');
 const btnNovo = document.getElementById('btnNovo');
 const btnQuiz = document.getElementById('btnQuiz'); 
 const themeToggle = document.getElementById('themeToggle'); 
-
-/* ---------------------------
-   Estado e Dados
-----------------------------*/
-let BD = JSON.parse(localStorage.getItem('BD_QUESTOES') || '[]');
-let BD_FC = JSON.parse(localStorage.getItem('BD_FLASHCARDS') || '[]');
-let SAVED_FILTERS = JSON.parse(localStorage.getItem('BD_FILTROS') || '{}');
-let DAILY_GOAL = JSON.parse(localStorage.getItem('BD_DAILY_GOAL') || '{"date": "", "count": 0, "target": 20}');
-
-let currentMode = 'questoes'; 
-
-// Quiz / Treino State
-let inQuiz = false;
-let quizIndex = 0;
-let quizOrder = [];
-let timerInterval = null;
-let startTime = 0;
-
-// Flashcard Player State
-let fcIndex = 0;
-let fcList = [];
-
-let currentPage = 1;
-const ITEMS_PER_PAGE = 20;
-let questionsSinceBackup = 0;
 
 /* ---------------------------
    Utilitários e Meta
@@ -1334,6 +1366,8 @@ if(btnCloseStats) btnCloseStats.addEventListener('click', () => statsModal.close
 if(btnNovo) btnNovo.addEventListener('click', () => { currentMode === 'questoes' ? abrirFormulario() : openFCForm(); });
 if(btnQuiz) btnQuiz.addEventListener('click', () => { currentMode === 'questoes' ? initQuiz() : startFlashcardStudy(); });
 if(fSearch) fSearch.addEventListener('input', () => { currentPage = 1; renderQuestions(); });
+if(fDificuldade) fDificuldade.addEventListener('change', onFilterChange);
+if(fQtdTreino) fQtdTreino.addEventListener('change', onFilterChange);
 // Os listeners de dropdown (change) agora são anexados dinamicamente na função 'updateFilterOptions'
 if(btnPrevPage) btnPrevPage.addEventListener('click', () => { if(currentPage>1){currentPage--; renderQuestions(); lista.scrollTop=0;} });
 if(btnNextPage) btnNextPage.addEventListener('click', () => { currentPage++; renderQuestions(); lista.scrollTop=0; });
@@ -1372,17 +1406,21 @@ function migrateOldQuestions() {
   });
   if (count > 0) saveBD();
 }
-function onFilterChange() { currentPage = 1; renderQuestions(); }
+function onFilterChange() {
+	currentPage = 1;
+	renderQuestions();
+    updateFilterOptions();
+	}
 
 /* ================================
    SISTEMA DE CRONOGRAMA INTELIGENTE
    ================================ */
 
-let CRONOGRAMA_DATA = JSON.parse(localStorage.getItem('BD_CRONOGRAMA') || 'null');
-let MATERIAS_CRONOGRAMA = JSON.parse(localStorage.getItem('BD_MATERIAS') || '[]');
-
 // Inicialização do cronograma
+// FUNÇÃO INIT CRONOGRAMA - VERSÃO CORRIGIDA
 function initCronograma() {
+    console.log('🔄 Iniciando initCronograma()...');
+    
     // Configura data mínima como hoje
     const hoje = new Date().toISOString().split('T')[0];
     const dataProvaInput = document.getElementById('dataProva');
@@ -1393,16 +1431,51 @@ function initCronograma() {
     // Carrega matérias salvas
     renderizarMateriasCronograma();
     
-    // Carrega cronograma existente
-    if (CRONOGRAMA_DATA) {
-        carregarCronogramaExistente();
+    // *** CORREÇÃO SIMPLES E DIRETA ***
+    try {
+        const cronogramaSalvo = localStorage.getItem('BD_CRONOGRAMA');
+        console.log('📦 BD_CRONOGRAMA no localStorage:', cronogramaSalvo);
+        
+        if (cronogramaSalvo && cronogramaSalvo !== 'null' && cronogramaSalvo !== 'undefined') {
+            const parsed = JSON.parse(cronogramaSalvo);
+            console.log('✅ Parse bem-sucedido, estrutura:', parsed);
+            
+            // Verificação MÍNIMA - só precisa ter dataProva
+            if (parsed && parsed.dataProva) {
+                CRONOGRAMA_DATA = parsed;
+                console.log('🎯 Cronograma válido, EXIBINDO...');
+                
+                // *** CHAMADA DIRETA E GARANTIDA ***
+                setTimeout(() => {
+                    exibirCronograma(CRONOGRAMA_DATA);
+                    console.log('✅ Cronograma exibido na inicialização');
+                }, 200);
+                
+            }
+        }
+    } catch (e) {
+        console.error('❌ Erro ao carregar cronograma:', e);
     }
+    
+    // Inicializa navegação
+    initNavegacaoCronograma();
     
     // Toggle do cronograma
     const btnToggle = document.getElementById('btnToggleCronograma');
     if (btnToggle) {
         btnToggle.addEventListener('click', toggleCronograma);
     }
+}
+
+// *** NOVA FUNÇÃO: Verifica se o cronograma ainda é válido ***
+function isCronogramaValido(cronograma) {
+    if (!cronograma || !cronograma.dataProva) return false;
+    
+    const hoje = new Date();
+    const dataProva = new Date(cronograma.dataProva);
+    
+    // Cronograma é válido se a prova for hoje ou no futuro
+    return dataProva >= hoje;
 }
 
 function toggleCronograma() {
@@ -1415,6 +1488,28 @@ function toggleCronograma() {
     } else {
         content.style.display = 'none';
         btn.textContent = '▶';
+    }
+}
+
+// Função de teste temporária
+function testarCronograma() {
+    console.log('=== TESTE CRONOGRAMA ===');
+    console.log('CRONOGRAMA_DATA:', CRONOGRAMA_DATA);
+    console.log('localStorage BD_CRONOGRAMA:', localStorage.getItem('BD_CRONOGRAMA'));
+    
+    const salvo = localStorage.getItem('BD_CRONOGRAMA');
+    if (salvo) {
+        try {
+            const parsed = JSON.parse(salvo);
+            console.log('✅ Parse bem-sucedido:', parsed);
+            CRONOGRAMA_DATA = parsed;
+            exibirCronograma(CRONOGRAMA_DATA);
+            showToast("Cronograma carregado via teste!", "success");
+        } catch (e) {
+            console.error('❌ Erro no parse:', e);
+        }
+    } else {
+        console.log('❌ Nada salvo no localStorage');
     }
 }
 
@@ -1490,7 +1585,7 @@ function gerarCronograma() {
     }
     
     // Calcula totais
-    const totalDiasEstudo = Math.floor((diffDays - 7) * (diasSemana / 7)); // Subtrai 1 semana para revisão
+    const totalDiasEstudo = Math.floor((diffDays - 7) * (diasSemana / 7));
     const totalHoras = totalDiasEstudo * horasDia;
     const horasPorMateria = Math.floor(totalHoras / MATERIAS_CRONOGRAMA.length);
     
@@ -1515,12 +1610,22 @@ function gerarCronograma() {
     // Distribui as matérias pelas semanas
     distribuirMateriasPorSemana(cronograma);
     
-    // Salva e exibe
+    // *** CORREÇÃO: Salva ANTES de exibir ***
     CRONOGRAMA_DATA = cronograma;
-    localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(cronograma));
+    
+    // *** SALVA EM DOIS LOCAIS para garantir ***
+    try {
+        localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(cronograma));
+        fazerBackupCronograma(); // Backup adicional
+        console.log('💾 Cronograma salvo no localStorage');
+    } catch (e) {
+        console.error('Erro ao salvar cronograma:', e);
+        showToast('Erro ao salvar cronograma!', 'error');
+        return;
+    }
     
     exibirCronograma(cronograma);
-    showToast('Cronograma gerado com sucesso! 🎯', 'success');
+    showToast('Cronograma gerado e salvo com sucesso! 🎯', 'success');
 }
 
 function distribuirMateriasPorSemana(cronograma) {
@@ -1574,19 +1679,30 @@ function distribuirMateriasPorSemana(cronograma) {
 }
 
 function exibirCronograma(cronograma) {
+    console.log('🎯 EXIBIR_CRONOGRAMA - Início da função');
+    
     const setup = document.getElementById('cronogramaSetup');
     const view = document.getElementById('cronogramaView');
-    const resumo = document.getElementById('resumoCronograma');
-    const tabs = document.getElementById('tabsSemanas');
-    const conteudo = document.getElementById('conteudoCronograma');
     
-    if (!setup || !view || !resumo || !tabs || !conteudo) return;
+    console.log('🎯 Elementos DOM:', { setup, view });
     
-    // Mostra a view e esconde o setup
+    if (!setup || !view) {
+        console.error('❌ Elementos do cronograma não encontrados');
+        return;
+    }
+    
+    // *** CORREÇÃO: Transição visual EXPLÍCITA ***
     setup.style.display = 'none';
     view.style.display = 'block';
     
+    console.log('✅ Setup escondido, View mostrado');
+	
+    const resumo = document.getElementById('resumoCronograma');
+    const tabs = document.getElementById('tabsSemanas');
+    const conteudo = document.getElementById('conteudoCronograma');
+	
     // Atualiza resumo
+  if (resumo && cronograma.dataProva) {
     const progresso = calcularProgressoCronograma(cronograma);
     resumo.innerHTML = `
         <strong>🎯 Meta:</strong> ${cronograma.dataProva} 
@@ -1594,41 +1710,48 @@ function exibirCronograma(cronograma) {
         | <strong>⏱️ Total:</strong> ${cronograma.totalHoras}h
         | <strong>📊 Progresso:</strong> ${progresso}%
     `;
-    
+  }
+	
     // Gera tabs das semanas
-    tabs.innerHTML = cronograma.semanas.map(semana => `
-        <button class="btn secondary tab-semana ${semana.numero === 1 ? 'active' : ''}" 
-                onclick="mostrarSemana(${semana.numero})">
-            Semana ${semana.numero}
-        </button>
-    `).join('');
+    if (tabs && cronograma.semanas) {
+        tabs.innerHTML = cronograma.semanas.map(semana => `
+            <button class="btn secondary tab-semana ${semana.numero === 1 ? 'active' : ''}" 
+                    onclick="mostrarSemana(${semana.numero})">
+                Semana ${semana.numero}
+            </button>
+        `).join('');
+    }
     
     // Gera conteúdo das semanas
-    conteudo.innerHTML = cronograma.semanas.map(semana => `
-        <div id="semana-${semana.numero}" class="semana-conteudo" style="display: ${semana.numero === 1 ? 'block' : 'none'};">
-            <h5 style="margin: 15px 0 10px 0; color: var(--accent);">
-                ${semana.isRevisao ? '🔄 REVISÃO GERAL' : '📚 Estudos'} - Semana ${semana.numero}
-            </h5>
-            <div class="dias-semana">
-                ${semana.dias.map(dia => `
-                    <div class="dia-cronograma ${dia.concluido ? 'concluido' : ''}" 
-                         onclick="marcarDiaConcluido(${semana.numero}, ${dia.dia})">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>Dia ${dia.dia}:</strong> ${escapeHtml(dia.materia)}</span>
-                            <span class="status-dia">${dia.concluido ? '✅' : '⏳'}</span>
+    if (conteudo && cronograma.semanas) {
+        conteudo.innerHTML = cronograma.semanas.map(semana => `
+            <div id="semana-${semana.numero}" class="semana-conteudo" style="display: ${semana.numero === 1 ? 'block' : 'none'};">
+                <h5 style="margin: 15px 0 10px 0; color: var(--accent);">
+                    ${semana.isRevisao ? '🔄 REVISÃO GERAL' : '📚 Estudos'} - Semana ${semana.numero}
+                </h5>
+                <div class="dias-semana">
+                    ${semana.dias.map(dia => `
+                        <div class="dia-cronograma ${dia.concluido ? 'concluido' : ''}" 
+                             onclick="marcarDiaConcluido(${semana.numero}, ${dia.dia})">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span><strong>Dia ${dia.dia}:</strong> ${escapeHtml(dia.materia)}</span>
+                                <span class="status-dia">${dia.concluido ? '✅' : '⏳'}</span>
+                            </div>
+                            <div class="meta" style="margin-top: 5px;">
+                                Horas estudadas: 
+                                <input type="number" min="0" max="8" value="${dia.horasEstudadas}" 
+                                       onchange="atualizarHorasDia(${semana.numero}, ${dia.dia}, this.value)"
+                                       style="width: 50px; padding: 2px; margin: 0 5px;">
+                                h
+                            </div>
                         </div>
-                        <div class="meta" style="margin-top: 5px;">
-                            Horas estudadas: 
-                            <input type="number" min="0" max="8" value="${dia.horasEstudadas}" 
-                                   onchange="atualizarHorasDia(${semana.numero}, ${dia.dia}, this.value)"
-                                   style="width: 50px; padding: 2px; margin: 0 5px;">
-                            h
-                        </div>
-                    </div>
-                `).join('')}
+                    `).join('')}
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+    }
+    
+    console.log('🎯 EXIBIR_CRONOGRAMA - Finalizado com sucesso');
 }
 
 function calcularProgressoCronograma(cronograma) {
@@ -1701,9 +1824,59 @@ function atualizarHorasDia(numeroSemana, numeroDia, horas) {
     localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(CRONOGRAMA_DATA));
 }
 
+// *** FUNÇÃO CORRIGIDA: Carregar Cronograma Existente ***
 function carregarCronogramaExistente() {
-    if (!CRONOGRAMA_DATA) return;
-    exibirCronograma(CRONOGRAMA_DATA);
+    console.log('🔄 Carregando cronograma existente...', CRONOGRAMA_DATA);
+    
+    if (!CRONOGRAMA_DATA) {
+        console.log('❌ CRONOGRAMA_DATA é null ou undefined');
+        return;
+    }
+    
+    // Verificação mais rigorosa
+    if (!CRONOGRAMA_DATA.dataProva || !CRONOGRAMA_DATA.materias) {
+        console.log('❌ Estrutura do cronograma incompleta');
+        return;
+    }
+    
+    try {
+        // Atualiza matérias
+        if (CRONOGRAMA_DATA.materias && CRONOGRAMA_DATA.materias.length > 0) {
+            MATERIAS_CRONOGRAMA = CRONOGRAMA_DATA.materias.map(m => m.nome || m); // Suporte a formato antigo
+            localStorage.setItem('BD_MATERIAS', JSON.stringify(MATERIAS_CRONOGRAMA));
+            renderizarMateriasCronograma();
+        }
+        
+        // Exibe o cronograma
+        exibirCronograma(CRONOGRAMA_DATA);
+        console.log('✅ Cronograma carregado com sucesso!');
+        
+    } catch (e) {
+        console.error('❌ Erro ao carregar cronograma:', e);
+    }
+}
+
+// *** FUNÇÃO DE TESTE - Forçar salvamento ***
+function debugSalvarCronograma() {
+    if (!CRONOGRAMA_DATA) {
+        console.log('❌ Nenhum cronograma para salvar');
+        return;
+    }
+    
+    console.log('💾 Salvando cronograma manualmente...', CRONOGRAMA_DATA);
+    
+    try {
+        localStorage.setItem('BD_CRONOGRAMA', JSON.stringify(CRONOGRAMA_DATA));
+        localStorage.setItem('BD_CRONOGRAMA_DEBUG', new Date().toISOString());
+        console.log('✅ Cronograma salvo com sucesso!');
+        
+        // Verifica se salvou
+        const verificar = localStorage.getItem('BD_CRONOGRAMA');
+        console.log('🔍 Verificação:', verificar ? 'SALVO' : 'NÃO SALVO');
+        
+    } catch (e) {
+        console.error('❌ Erro ao salvar:', e);
+    }
 }
 
 function limparCronograma() {
@@ -1717,6 +1890,42 @@ function limparCronograma() {
     document.getElementById('dataProva').value = '';
     
     showToast('Cronograma limpo!', 'info');
+}
+
+// *** NOVA FUNÇÃO: Backup automático do cronograma ***
+function fazerBackupCronograma() {
+    if (CRONOGRAMA_DATA) {
+        try {
+            localStorage.setItem('BD_CRONOGRAMA_BACKUP', JSON.stringify({
+                ...CRONOGRAMA_DATA,
+                backupDate: new Date().toISOString()
+            }));
+        } catch (e) {
+            console.error('Erro no backup:', e);
+        }
+    }
+}
+
+// *** NOVA FUNÇÃO: Restaurar do backup se necessário ***
+function tentarRestaurarBackup() {
+    try {
+        const backup = localStorage.getItem('BD_CRONOGRAMA_BACKUP');
+        if (backup) {
+            const backupData = JSON.parse(backup);
+            // Restaura se o backup for de menos de 24 horas
+            const backupDate = new Date(backupData.backupDate);
+            const agora = new Date();
+            const diffHoras = (agora - backupDate) / (1000 * 60 * 60);
+            
+            if (diffHoras < 24) {
+                console.log('🔄 Tentando restaurar do backup...');
+                return backupData;
+            }
+        }
+    } catch (e) {
+        console.error('Erro ao restaurar backup:', e);
+    }
+    return null;
 }
 
 function exportarCronograma() {
@@ -1747,7 +1956,6 @@ function exportarCronograma() {
    SISTEMA DE GERENCIAMENTO DO CRONOGRAMA
    ================================ */
 
-let MODELOS_CRONOGRAMA = JSON.parse(localStorage.getItem('BD_MODELOS_CRONOGRAMA') || '[]');
 let semanaAtual = 1;
 
 // Funções de Navegação
@@ -2097,13 +2305,48 @@ function initCronograma() {
     }
 }
 
+// *** FUNÇÃO DE RECARREGAMENTO MANUAL ***
+function recarregarCronograma() {
+    const salvo = localStorage.getItem('BD_CRONOGRAMA');
+    if (salvo) {
+        try {
+            CRONOGRAMA_DATA = JSON.parse(salvo);
+            carregarCronogramaExistente();
+            showToast('Cronograma recarregado!', 'success');
+        } catch (e) {
+            showToast('Erro ao recarregar cronograma!', 'error');
+        }
+    } else {
+        showToast('Nenhum cronograma salvo encontrado!', 'error');
+    }
+}
+
+// *** ATUALIZE a função init() principal ***
 function init(){
   loadTheme(); 
   initDailyGoal(); 
   populateSavedFilters();
   migrateOldQuestions(); 
   updateFilterOptions();
-  initCronograma();
+  
+   // *** CORREÇÃO: Inicializar cronograma DEPOIS de tudo ***
+  setTimeout(() => {
+    console.log('🔄 Inicializando cronograma com delay...');
+    initCronograma();
+  }, 100);
+  // *** CORREÇÃO: Inicializa cronograma com verificação ***
+  //console.log('🔄 Inicializando cronograma...');
+  //initCronograma();
+  
+  // Debug: verificar se salvou corretamente
+  //setTimeout(() => {
+    //const salvo = localStorage.getItem('BD_CRONOGRAMA');
+    //console.log('📦 Cronograma no localStorage:', salvo ? '✅ SALVO' : '❌ NÃO SALVO');
+    //if (salvo) {
+      //  console.log('📊 Dados salvos:', JSON.parse(salvo));
+    //}
+  
+  //}, 1000);
   switchMode('questoes');
 }
 init();

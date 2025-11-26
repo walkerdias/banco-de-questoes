@@ -356,45 +356,50 @@
       <div class="form-actions">
         <button onclick="gerarCronograma()" class="btn primary">🎯 Gerar Cronograma</button>
         <button onclick="salvarComoModelo()" class="btn secondary">💾 Salvar Modelo</button>
+		<button onclick="testarCronograma()" class="btn secondary">🐛 Testar</button>
         <button onclick="limparCronograma()" class="btn secondary">🗑️ Limpar</button>
       </div>
     </div>
 
-    <!-- Visualização do Cronograma Gerado -->
-    <div id="cronogramaView" style="display: none; margin-top: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h4 style="margin: 0;">📋 Seu Cronograma</h4>
-        <div style="display: flex; gap: 8px;">
-          <button onclick="editarCronograma()" class="btn secondary" style="font-size: 0.8rem;">✏️ Editar</button>
-          <button onclick="refazerCronograma()" class="btn secondary" style="font-size: 0.8rem;">🔄 Refazer</button>
-          <button onclick="exportarCronograma()" class="btn secondary" style="font-size: 0.8rem;">📤 Exportar</button>
-          <button onclick="excluirCronograma()" class="btn secondary" style="font-size: 0.8rem; background: var(--danger);">🗑️ Excluir</button>
-        </div>
-      </div>
-      
-      <div id="resumoCronograma" class="meta" style="margin-bottom: 15px; padding: 10px; background: var(--bg); border-radius: 8px;"></div>
-      
-      <!-- Controles de Navegação -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <div id="tabsSemanas" style="flex: 1;">
-          <!-- Tabs de semanas serão geradas aqui -->
-        </div>
-        <div style="display: flex; gap: 5px;">
-          <button id="btnSemanaAnterior" class="btn secondary" style="padding: 6px 10px;">◀</button>
-          <button id="btnSemanaProxima" class="btn secondary" style="padding: 6px 10px;">▶</button>
-        </div>
-      </div>
-      
-      <div id="conteudoCronograma" style="max-height: 400px; overflow-y: auto;">
-        <!-- Conteúdo das semanas será gerado aqui -->
-      </div>
-
-      <!-- Ações Rápidas -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-        <button onclick="marcarSemanaComoConcluida()" class="btn secondary" style="font-size: 0.8rem;">✅ Marcar Semana</button>
-        <button onclick="recalcularCronograma()" class="btn secondary" style="font-size: 0.8rem;">📊 Recalcular</button>
-      </div>
+<!-- Visualização do Cronograma Gerado -->
+<div id="cronogramaView" style="display: none; margin-top: 20px;">
+  <div style="margin-bottom: 15px;">
+    <h4 style="margin: 0 0 10px 0;">📋 Seu Cronograma</h4>
+    
+    <!-- Primeira linha de botões principais -->
+    <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+      <button onclick="editarCronograma()" class="btn secondary" style="font-size: 0.8rem; flex: 1; min-width: 80px;">✏️ Editar</button>
+      <button onclick="refazerCronograma()" class="btn secondary" style="font-size: 0.8rem; flex: 1; min-width: 80px;">🔄 Refazer</button>
+      <button onclick="exportarCronograma()" class="btn secondary" style="font-size: 0.8rem; flex: 1; min-width: 80px;">📤 Exportar</button>
     </div>
+    
+    <!-- Segunda linha com botão de exclusão destacado -->
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <button onclick="excluirCronograma()" class="btn secondary" style="font-size: 0.8rem; flex: 1; min-width: 80px; background: var(--danger) !important; color: white !important;">🗑️ Excluir</button>
+      <button onclick="recalcularCronograma()" class="btn secondary" style="font-size: 0.8rem; flex: 1; min-width: 80px;">📊 Recalcular</button>
+      <button onclick="marcarSemanaComoConcluida()" class="btn secondary" style="font-size: 0.8rem; flex: 1; min-width: 80px;">✅ Marcar <br> Semana</button>
+	  <button onclick="recarregarCronograma()" class="btn secondary" style="font-size: 0.7rem; background: var(--warning); margin-top: 5px;">🔄 Recarregar</button>
+<!--	  <button onclick="debugSalvarCronograma()" style="background: orange; color: black;">🐛 Debug Save</button> -->
+    </div>
+  </div>
+  
+  <div id="resumoCronograma" class="meta" style="margin-bottom: 15px; padding: 10px; background: var(--bg); border-radius: 8px;"></div>
+  
+  <!-- Controles de Navegação -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+    <div id="tabsSemanas" style="flex: 1; display: flex; flex-wrap: wrap; gap: 5px;">
+      <!-- Tabs de semanas serão geradas aqui -->
+    </div>
+    <div style="display: flex; gap: 5px;">
+      <button id="btnSemanaAnterior" class="btn secondary" style="padding: 6px 10px;">◀</button>
+      <button id="btnSemanaProxima" class="btn secondary" style="padding: 6px 10px;">▶</button>
+    </div>
+  </div>
+  
+  <div id="conteudoCronograma" style="max-height: 400px; overflow-y: auto;">
+    <!-- Conteúdo das semanas será gerado aqui -->
+  </div>
+</div>
 
     <!-- Modal de Edição -->
     <dialog id="modalEditarCronograma" class="modal">
