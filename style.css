@@ -429,6 +429,106 @@ input[type="text"], input[type="number"], textarea, select { width: 100%; paddin
 /* ------------------------------------- */
 
 /* ================================
+   CORREÇÃO DOS FILTROS NO MOBILE
+   ================================ */
+
+@media (max-width: 768px) {
+  /* Container principal dos filtros avançados */
+  .search:has(#fDificuldade) {
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  
+  /* Filtros individuais - mantém alinhamento à esquerda */
+  #fDificuldade,
+  .notebook-controls,
+  .checkbox-label,
+  #fQtdTreino {
+    flex: 0 1 auto !important;
+    margin: 2px 0 !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+  }
+  
+  /* Container dos cadernos */
+  .notebook-controls {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 5px !important;
+    align-items: center !important;
+    min-width: 200px !important;
+  }
+  
+  /* Select dos cadernos */
+  #savedFilters {
+    min-width: 150px !important;
+    flex: 1 !important;
+  }
+  
+  /* Botões dos cadernos */
+  #btnSaveFilter,
+  #btnDeleteFilter {
+    flex: 0 0 auto !important;
+    width: auto !important;
+  }
+  
+  /* Checkbox de revisão */
+  .checkbox-label {
+    white-space: nowrap !important;
+    margin-right: 10px !important;
+  }
+  
+  /* Select de quantidade */
+  #fQtdTreino {
+    width: auto !important;
+    min-width: 80px !important;
+  }
+  
+  /* Label da quantidade */
+  label[for="fQtdTreino"] {
+    white-space: nowrap !important;
+    margin: 0 !important;
+  }
+}
+
+/* Para telas muito pequenas, ajuste adicional */
+@media (max-width: 480px) {
+  .search:has(#fDificuldade) {
+    gap: 8px !important;
+  }
+  
+  .notebook-controls {
+    min-width: 180px !important;
+    flex-wrap: wrap !important;
+  }
+  
+  #savedFilters {
+    min-width: 120px !important;
+  }
+  
+  .checkbox-label {
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Garantir que os filtros fiquem alinhados à esquerda em todas as telas */
+.top-bar .search {
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+/* Container específico dos filtros avançados */
+.search:has(#fDificuldade) {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* ================================
    RESPONSIVIDADE MOBILE
    ================================ */
 
